@@ -34,11 +34,11 @@ type Episode struct {
     Broadcasted time.Time
     Category string
     Description string
-    EpisodeNumber int64
+    EpisodeNumber string
     Length string
     Live bool
     PlayId int64
-    Season int64
+    Season string
     Thumbnail string
     Title string
     VideoUrl string
@@ -61,6 +61,7 @@ type Statistics struct {
     BroadcastDate string
     BroadcastTime string
     Category string
+	Title string
 }
 
 type Video struct {
@@ -91,7 +92,7 @@ type Item struct {
     Guid int64 `xml:"guid"`
 }
 
-func GetAllPrograms() (programs []string) {
+func GetAllProgramIds() (programs []string) {
     b := getPage(allProgramsPage)
     reader := bytes.NewReader(b)
     doc, err := goquery.NewDocumentFromReader(reader)
@@ -161,14 +162,13 @@ func GetEpisode(episodeId string) (e Episode) {
     var p Program
     err := json.Unmarshal(b, &p)
     checkerr(err)
-    e.Broadcasted = time.Now()
+    e.Broadcasted = parseDateTime(p.Statistics.BroadcastDate, p.Statistics.BroadcastTime)
     e.Category = p.Statistics.Category
     e.Description = ""
-    e.EpisodeNumber = 0
     e.Length = (time.Duration(p.Video.MaterialLength) * time.Second).String()
     e.Live = p.Video.Live
     e.PlayId = p.VideoId
-    e.Season = 0
+    e.Season, e.EpisodeNumber = parseSeasonEpisodeNumbers(p)
     e.Title = p.Context.Title
     e.Thumbnail = p.Context.ThumbnailImage
     for _, vref := range p.Video.VideoReferences {
@@ -189,6 +189,36 @@ func getPage(url string) []byte {
     checkerr(err)
     b, _ := ioutil.ReadAll(resp.Body)
     return b
+}
+
+func parseDateTime(d string, t string) (datetime time.Time){
+	year := d[0:4]
+	month := d[4:6]
+	day := d[6:8]
+	hour := t[0:2]
+	minute := t[2:4]
+	datetime, _ = time.Parse("2006 01 02 15:04", year + " " + month + " " + day + " " + hour + ":" + minute)
+	return
+}
+
+func parseSeasonEpisodeNumbers(p Program) (season string, episode string) {
+	t := p.Statistics.Title
+	letters, _ := regexp.Compile(`^([a-z])`)
+	foundLetters := letters.MatchString(t)
+	s := strings.Split(t, "-")
+	if foundLetters {
+		if len(s) >= 4 {
+			 season = s[1]
+			 episode = s[3]
+		} else {
+			season = "0"
+			episode = s[1]
+		}
+	} else {
+		season = s[0] + "/" + s[1]
+		episode = s[2] + ":" + s[3]
+	}
+	return
 }
 
 func checkerr(err error) {

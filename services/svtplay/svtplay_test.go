@@ -11,6 +11,21 @@ type testshow struct {
     number int
 }
 
+type testepisode struct {
+	id string
+	broadcastedtime string
+	category string
+    description string
+    episodenumber string
+    length string
+    live bool
+    playid int64
+    season string
+    thumbnail string
+    title string
+    videourl string
+}
+
 var showsXML = []testshow{
     {"vetenskapens-varld", "Vetenskapens värld", 18},
     {"uppdrag-granskning", "Uppdrag granskning", 15},
@@ -21,12 +36,20 @@ var showsPage = []testshow{
     {"uppdrag-granskning", "Uppdrag granskning", 15},
 }
 
-func TestPrograms(t *testing.T) {
-    programs := GetAllPrograms()
-    if len(programs) != 553 {
+var episodes = []testepisode{
+	{"2843612", "", "kultur-och-nöje", "", "4", "58m37s", false, 2843612, "7",
+	 "http://www.svt.se/cachable_image/1429226401000/svts/article2849370.svt/ALTERNATES/extralarge/default_title",
+ 	 "Avsnitt 4", "http://svtplay18p-f.akamaihd.net/i/se/open/20150417/1360782-004A/EPISOD-1360782-004A-2ae7758f8108a631_,892,144,252,360,540,1584,2700,.mp4.csmil/master.m3u8?cc1=name=Svenska~default=yes~forced=no~uri=http://media.svt.se/download/mcc/wp3/undertexter-wsrt/1360782/1360782-004A/C(sv)/index.m3u8~lang=sv"},
+	 {"2867878", "", "nyheter", "", "11:00", "1m30s", false, 2867878, "23/4", "http://www.svt.se/cachable_image/1429781701000/svts/article2867877.svt/ALTERNATES/extralarge/default_title",
+ 	"23/4 11.00", "http://svtplay19i-f.akamaihd.net/i/world/open/20150423/1368669-074A/EPISOD-1368669-074A-208212fd95c96099_,892,144,252,360,540,1584,2700,.mp4.csmil/master.m3u8"},
+}
+
+func TestProgramIds(t *testing.T) {
+    programs := GetAllProgramIds()
+    if len(programs) != 554 {
         t.Error(
-            "For", "GetAllPrograms",
-            "expected", 553,
+            "For", "GetAllProgramIds",
+            "expected", 554,
             "got", len(programs),
         )
     }
@@ -74,4 +97,66 @@ func TestShowPageParse(t *testing.T) {
             )
         }
     }
+}
+
+func TestGetEpisode(t *testing.T) {
+	for _, pair := range episodes {
+		e := GetEpisode(pair.id)
+		if e.EpisodeNumber != pair.episodenumber {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.episodenumber,
+                "got", e.EpisodeNumber,
+            )
+		}
+		if e.Length != pair.length {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.length,
+                "got", e.Length,
+            )
+		}
+		if e.Live != pair.live {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.live,
+                "got", e.Live,
+            )
+		}
+		if e.PlayId != pair.playid {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.playid,
+                "got", e.PlayId,
+            )
+		}
+		if e.Season != pair.season {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.season,
+                "got", e.Season,
+            )
+		}
+		if e.Thumbnail != pair.thumbnail {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.thumbnail,
+                "got", e.Thumbnail,
+            )
+		}
+		if e.Title != pair.title {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.title,
+                "got", e.Title,
+            )
+		}
+		if e.VideoUrl != pair.videourl {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.videourl,
+                "got", e.VideoUrl,
+            )
+		}
+	}
 }
