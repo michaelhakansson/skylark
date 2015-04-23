@@ -4,7 +4,7 @@ import(
     "bytes"
     "encoding/json"
     "encoding/xml"
-    "fmt"
+    "log"
     "io/ioutil"
     "net/http"
     "regexp"
@@ -61,7 +61,7 @@ type Statistics struct {
     BroadcastDate string
     BroadcastTime string
     Category string
-	Title string
+    Title string
 }
 
 type Video struct {
@@ -146,8 +146,10 @@ func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
     doc.Find(".play_vertical-list").First().Find("li").Each(func(i int, s *goquery.Selection) {
         link, _ := s.Find(".play_vertical-list__header-link").Attr("href")
         digi := r.FindString(link)
-        cleanId := strings.Replace(string(digi), "/", "", 2)
-        ids = append(ids, cleanId)
+        if len(digi) > 0 {
+            cleanId := strings.Replace(string(digi), "/", "", 2)
+            ids = append(ids, cleanId)
+        }
     })
     for _, id := range ids {
         e := GetEpisode(id)
@@ -164,7 +166,7 @@ func GetEpisode(episodeId string) (e Episode) {
     checkerr(err)
     e.Broadcasted = parseDateTime(p.Statistics.BroadcastDate, p.Statistics.BroadcastTime)
     e.Category = p.Statistics.Category
-    e.Description = ""
+    e.Description = parseDescription(episodeId)
     e.Length = (time.Duration(p.Video.MaterialLength) * time.Second).String()
     e.Live = p.Video.Live
     e.PlayId = p.VideoId
@@ -191,39 +193,49 @@ func getPage(url string) []byte {
     return b
 }
 
+func parseDescription(episodeId string) (description string) {
+    url := videoUrlBase + episodeId
+    b := getPage(url)
+    reader := bytes.NewReader(b)
+    doc, err := goquery.NewDocumentFromReader(reader)
+    checkerr(err)
+    description = doc.Find(".play_video-area-aside__info-text").First().Text()
+    return
+}
+
 func parseDateTime(d string, t string) (datetime time.Time){
-	year := d[0:4]
-	month := d[4:6]
-	day := d[6:8]
-	hour := t[0:2]
-	minute := t[2:4]
-	datetime, _ = time.Parse("2006 01 02 15:04", year + " " + month + " " + day + " " + hour + ":" + minute)
-	return
+    year := d[0:4]
+    month := d[4:6]
+    day := d[6:8]
+    hour := t[0:2]
+    minute := t[2:4]
+    datetime, _ = time.Parse("2006 01 02 15:04", year + " " + month + " " + day + " " + hour + ":" + minute)
+    return
 }
 
 func parseSeasonEpisodeNumbers(p Program) (season string, episode string) {
-	t := p.Statistics.Title
-	letters, _ := regexp.Compile(`^([a-z])`)
-	foundLetters := letters.MatchString(t)
-	s := strings.Split(t, "-")
-	if foundLetters {
-		if len(s) >= 4 {
-			 season = s[1]
-			 episode = s[3]
-		} else {
-			season = "0"
-			episode = s[1]
-		}
-	} else {
-		season = s[0] + "/" + s[1]
-		episode = s[2] + ":" + s[3]
-	}
-	return
+    t := p.Statistics.Title
+    letters, _ := regexp.Compile(`^([a-z])`)
+    foundLetters := letters.MatchString(t)
+    s := strings.Split(t, "-")
+    if foundLetters {
+        if len(s) >= 4 {
+            season = s[1]
+            episode = s[3]
+        } else {
+            season = "0"
+            episode = s[1]
+        }
+    } else {
+        season = s[0] + "/" + s[1]
+        episode = s[2] + ":" + s[3]
+    }
+    return
 }
 
 func checkerr(err error) {
     if err != nil {
-        fmt.Println(err)
+        log.Println(err)
     }
 }
 
