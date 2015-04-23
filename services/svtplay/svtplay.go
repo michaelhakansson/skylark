@@ -91,22 +91,6 @@ type Item struct {
     Guid int64 `xml:"guid"`
 }
 
-/*func main() {
-    /*url := "http://www.svtplay.se/video/2843361?output=json&format=json"
-    p := GetEpisode(url)
-    fmt.Println(p)
-    showId := "uppdrag-granskning"
-    s, e := GetShow(showId)
-    fmt.Println(s)
-    fmt.Println(e)
-    fmt.Println(len(e))
-
-    /*programs := GetAllPrograms()
-    for _, pro := range programs {
-        fmt.Println(pro)
-    }
-}*/
-
 func GetAllPrograms() (programs []string) {
     b := getPage(allProgramsPage)
     reader := bytes.NewReader(b)
