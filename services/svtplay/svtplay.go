@@ -21,15 +21,16 @@ const(
     jsonVideoOutputString string = "?output=json&format=json"
     allProgramsPage string = playUrlBase + "program"
     rssUrl string = "/rss.xml"
-    xmlDateLayout string = "Mon, 2 Jan 2006 15:04:05 MST"
 )
 
+// struct for show information
 type Show struct {
     PlayId string
     PlayService string
     Title string
 }
 
+// struct for episode information
 type Episode struct {
     Broadcasted time.Time
     Category string
@@ -44,6 +45,7 @@ type Episode struct {
     VideoUrl string
 }
 
+// structs for an episode's json output
 type Program struct {
     Context Context
     Statistics Statistics
@@ -78,6 +80,7 @@ type VideoReferences struct {
     Url string
 }
 
+// structs for rss feed
 type Channel struct {
     XMLName xml.Name `xml:"rss"`
     Title string `xml:"channel>title"`
@@ -92,6 +95,9 @@ type Item struct {
     Guid int64 `xml:"guid"`
 }
 
+// GetAllProgramIds fetches from the provider all of the programs id's
+// By parsing the "all program page" of the provider
+// Returns an array of all the id's in the form of a string array
 func GetAllProgramIds() (programs []string) {
     b := getPage(allProgramsPage)
     reader := bytes.NewReader(b)
@@ -105,6 +111,7 @@ func GetAllProgramIds() (programs []string) {
     return
 }
 
+// GetShow fetches the information and all the episodes for a show
 func GetShow(showId string) (Show, []Episode) {
     xmlUrl :=  playUrlBase + showId + rssUrl
     b := getPage(xmlUrl)
@@ -115,6 +122,9 @@ func GetShow(showId string) (Show, []Episode) {
         return parseShowPage(getPage(pageUrl), showId)
     }
 }
+
+// parseShowXML parses the rss feed for a show
+// Returns the show information and all the episodes
 func parseShowXML(page []byte, showId string) (show Show, episodes []Episode) {
     var c Channel
     err := xml.Unmarshal(page, &c)
@@ -133,6 +143,8 @@ func parseShowXML(page []byte, showId string) (show Show, episodes []Episode) {
     return
 }
 
+// parseShowPage parses the website for a show
+// Returns the show information and all the episodes
 func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
     var ids []string
     reader := bytes.NewReader(page)
@@ -158,6 +170,8 @@ func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
     return
 }
 
+// GetEpisode parses the information for an episode of a show
+// Returns the episode information
 func GetEpisode(episodeId string) (e Episode) {
     url := videoUrlBase + episodeId + jsonVideoOutputString
     b := getPage(url)
@@ -181,6 +195,7 @@ func GetEpisode(episodeId string) (e Episode) {
     return
 }
 
+// getPage fetches the content from a specified url
 func getPage(url string) []byte {
     client := &http.Client{}
     req, err := http.NewRequest("GET", url, nil)
@@ -193,6 +208,8 @@ func getPage(url string) []byte {
     return b
 }
 
+// parseDescription fetches the description for an episode
+// Returns the description as a string
 func parseDescription(episodeId string) (description string) {
     url := videoUrlBase + episodeId
     b := getPage(url)
@@ -203,6 +220,8 @@ func parseDescription(episodeId string) (description string) {
     return
 }
 
+// parseDateTime parses the date and time for when an episode was broadcasted
+// Returns the date and time as an time object
 func parseDateTime(d string, t string) (datetime time.Time){
     year := d[0:4]
     month := d[4:6]
@@ -213,6 +232,10 @@ func parseDateTime(d string, t string) (datetime time.Time){
     return
 }
 
+// parseSeasonEpisodeNumbers parses the season and episode number of an episode
+// If the episode do not have these numbers, the season number is set to the date
+// it was broadcast and the episode number is set to the time it was broadcasted
+// Returns the numbers as strings
 func parseSeasonEpisodeNumbers(p Program) (season string, episode string) {
     t := p.Statistics.Title
     letters, _ := regexp.Compile(`^([a-z])`)
@@ -233,6 +256,7 @@ func parseSeasonEpisodeNumbers(p Program) (season string, episode string) {
     return
 }
 
+// checkerr checks if an error has occured and logs it if has.
 func checkerr(err error) {
     if err != nil {
         log.Println(err)
