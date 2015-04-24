@@ -172,24 +172,24 @@ func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
 
 // GetEpisode parses the information for an episode of a show
 // Returns the episode information
-func GetEpisode(episodeId string) (e Episode) {
+func GetEpisode(episodeId string) (episode Episode) {
     url := videoUrlBase + episodeId + jsonVideoOutputString
     b := getPage(url)
     var p Program
     err := json.Unmarshal(b, &p)
     checkerr(err)
-    e.Broadcasted = parseDateTime(p.Statistics.BroadcastDate, p.Statistics.BroadcastTime)
-    e.Category = p.Statistics.Category
-    e.Description = parseDescription(episodeId)
-    e.Length = (time.Duration(p.Video.MaterialLength) * time.Second).String()
-    e.Live = p.Video.Live
-    e.PlayId = p.VideoId
-    e.Season, e.EpisodeNumber = parseSeasonEpisodeNumbers(p)
-    e.Title = p.Context.Title
-    e.Thumbnail = p.Context.ThumbnailImage
+    episode.Broadcasted = parseDateTime(p.Statistics.BroadcastDate, p.Statistics.BroadcastTime)
+    episode.Category = p.Statistics.Category
+    episode.Description = parseDescription(episodeId)
+    episode.Length = (time.Duration(p.Video.MaterialLength) * time.Second).String()
+    episode.Live = p.Video.Live
+    episode.PlayId = p.VideoId
+    episode.Season, episode.EpisodeNumber = parseSeasonEpisodeNumbers(p)
+    episode.Title = p.Context.Title
+    episode.Thumbnail = p.Context.ThumbnailImage
     for _, vref := range p.Video.VideoReferences {
         if vref.PlayerType == "ios" {
-            e.VideoUrl = vref.Url
+            episode.VideoUrl = vref.Url
         }
     }
     return
