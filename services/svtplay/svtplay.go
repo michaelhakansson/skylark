@@ -98,15 +98,15 @@ type Item struct {
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (programs []string) {
-    b := getPage(allProgramsPage)
-    reader := bytes.NewReader(b)
+func GetAllProgramIds() (ids []string) {
+    page := getPage(allProgramsPage)
+    reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
     doc.Find(".play_alphabetic-list ul li").Each(func(i int, s *goquery.Selection) {
         link, _ := s.Find("a").Attr("href")
         link = strings.Replace(link, "/", "", -1)
-        programs = append(programs, link)
+        ids = append(ids, link)
     })
     return
 }
