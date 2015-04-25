@@ -1,14 +1,11 @@
-//package tv3play
-package main
+package tv3play
 
 import(
     "bytes"
     "encoding/json"
-    // "encoding/xml"
     "fmt"
     "io/ioutil"
     "net/http"
-    // "regexp"
     "strconv"
     "strings"
     "time"
@@ -19,13 +16,19 @@ const(
     useragent string = "mozilla/5.0 (iphone; cpu iphone os 7_0_2 like mac os x) applewebkit/537.51.1 (khtml, like gecko) version/7.0 mobile/11a501 safari/9537.53"
     playService string = "tv3play"
     playUrlBase string = "http://www.tv3play.se/"
+    apiUrlBase string = "http://playapi.mtgx.tv/v3/"
     videoUrlBase string = playUrlBase + "program/"
-    // Should be followed by the episode id
-    jsonVideoOutputString string = "http://playapi.mtgx.tv/v3/videos/"
     allProgramsPage string = playUrlBase + "program"
-    rssUrl string = "/rss.xml"
+    // Should be followed by the episode id
+    jsonVideoOutputString string = apiUrlBase + "videos/"
     // The show URL should be followed by the show id after 'format='
-    showJsonUrl string = "http://playapi.mtgx.tv/v1/sections?sections=videos.one,seasons.videolist&format="
+    jsonShowUrl string = "http://playapi.mtgx.tv/v3/formats/"
+    // The format= should be followed by the show id
+    jsonSeasonsInShow string = apiUrlBase + "seasons?format="
+    // season= followed by season id
+    jsonEpisodesInSeason string = apiUrlBase + "videos?season="
+    // Stream url followed by episode id
+    jsonStreamUrl string = apiUrlBase + "videos/stream/"
     xmlDateLayout string = "Mon, 2 Jan 2006 15:04:05 MST"
     thumbnailSize string = "200x200"
 )
@@ -39,29 +42,31 @@ type Show struct {
 
 // struct for episode information
 type Episode struct {
-    Broadcasted time.Time   // TODO: Maybe changed to "air_at"
-    Category string         // DONE
-    Description string      // DONE
-    EpisodeNumber int64     // DONE
-    Length string           // DONE
-    Live bool               // Can't find
-    PlayId int64            // DONE
-    Season int64            // DONE
-    Thumbnail string        // DONE
-    Title string            // DONE
-    VideoUrl string         // TODO: If not HLS found --> use sharing.url URL
+    Broadcasted time.Time
+    Category string
+    Description string
+    EpisodeNumber string
+    Length string
+    Live bool
+    PlayId int64
+    Season string
+    Thumbnail string
+    Title string
+    VideoUrl string
 }
 
 // structs for an episode's json output
 type Program struct {
     Id int64 // Id of the video
-    Format_title string // The title of the show (without s. and ep. number)
-    Format_position Format_position
+    Title string // The title of the episode
+    Format_position Format_position // Used for season and episode number
+    Format_categories []Format_categories // Used for show category
     Embedded Embedded `json:"_embedded"` // Used to get thumbnail url
-    Format_categories []Format_categories
-    Description string
+    Summary string
     Duration int64
-    Publish_at string // Used as the broadcast date
+    Broadcasts []Broadcasts // Used to get the air date
+    Publish_at string // Used as backup if air date doesn't exist
+    Sharing Sharing // Used as backup if HLS stream doesn't exist
 }
 
 //Contains season and episode number
@@ -75,6 +80,7 @@ type Format_categories struct {
     Name string
 }
 
+// Used to get the thumbnail URL
 type Embedded struct {
     Format Format
 }
@@ -91,6 +97,49 @@ type Image struct {
     Href string
 }
 
+type Broadcasts struct {
+    Air_at string
+}
+
+type Sharing struct {
+    Url string
+}
+
+// Structs for seasons
+type AllSeasons struct {
+    EmbeddedSeasons EmbeddedSeasons `json:"_embedded"`
+}
+
+type EmbeddedSeasons struct {
+    Seasons []Seasons
+}
+
+type Seasons struct {
+    Id int64
+}
+
+// Structs for episodes
+type AllEpisodes struct {
+    EmbeddedEpisodes EmbeddedEpisodes `json:"_embedded"`
+}
+
+type EmbeddedEpisodes struct {
+    Videos []Videos
+}
+
+type Videos struct {
+    Id int64
+}
+
+// Structs for streams
+type AllStreams struct {
+    Streams Streams
+}
+
+type Streams struct {
+    Hls string
+}
+
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
@@ -105,14 +154,12 @@ func GetAllProgramIds() (programs []string) {
         section.Find("a").Each(func(j int, show *goquery.Selection) {
             link, _ := show.Attr("href")
             links = append(links, link)
-            //fmt.Println(links)
         })
     })
     
     // Fetch all program ids by visiting all links and extracting
     // the id from the shows.
     for _, link := range links {
-        fmt.Println(link)
         d := getPage(link)
         reader = bytes.NewReader(d)
         doc, err = goquery.NewDocumentFromReader(reader)
@@ -126,58 +173,43 @@ func GetAllProgramIds() (programs []string) {
     return
 }
 
-// // GetShow fetches the information and all the episodes for a show
-// func GetShow(showId string) (Show, []Episode) {
-//     url := showJsonUrl + showId
-//     b := getPage(url)
-//     if len(b) > 0 {
-//         return parseShowXML(b, showId)
-//     } else {
-//         pageUrl := playUrlBase + showId
-//         return parseShowPage(getPage(pageUrl), showId)
-//     }
-// }
+// GetShow fetches the information and all the episodes for a show
+func GetShow(showId string) (show Show, episodes []Episode) {
+    // 1. Build show info using API call
+    url := jsonShowUrl + showId
+    b := getPage(url)
+    err := json.Unmarshal(b, &show)
+    checkerr(err)
+    show.PlayId = showId
+    show.PlayService = playService
 
-// func parseShowXML(page []byte, showId string) (show Show, episodes []Episode) {
-//     var c Channel
-//     err := xml.Unmarshal(page, &c)
-//     checkerr(err)
-//     show.Title = strings.Replace(c.Title, " - Senaste program", "", 1)
-//     show.PlayService = playService
-//     show.PlayId = showId
-//     r, err := regexp.Compile(`\/\d+\/`)
-//     checkerr(err)
-//     for _, item := range c.Item {
-//         shortLink := r.FindString(item.Link)
-//         episodeId := strings.Replace(string(shortLink), "/", "", 2)
-//         e := GetEpisode(episodeId)
-//         episodes = append(episodes, e)
-//     }
-//     return
-// }
+    // 2. Fetch all seasons and id's via another API call
+    var s AllSeasons
+    url = jsonSeasonsInShow + showId
+    b = getPage(url)
+    err = json.Unmarshal(b, &s)
+    checkerr(err)
 
-// func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
-//     var ids []string
-//     reader := bytes.NewReader(page)
-//     doc, err := goquery.NewDocumentFromReader(reader)
-//     checkerr(err)
-//     r, err := regexp.Compile(`\/\d+\/`)
-//     checkerr(err)
-//     show.Title = doc.Find(".play_title-page-info__header-title").Text()
-//     show.PlayService = playService
-//     show.PlayId = showId
-//     doc.Find(".play_vertical-list").First().Find("li").Each(func(i int, s *goquery.Selection) {
-//         link, _ := s.Find(".play_vertical-list__header-link").Attr("href")
-//         digi := r.FindString(link)
-//         cleanId := strings.Replace(string(digi), "/", "", 2)
-//         ids = append(ids, cleanId)
-//     })
-//     for _, id := range ids {
-//         e := GetEpisode(id)
-//         episodes = append(episodes, e)
-//     }
-//     return
-// }
+    var seasonIds []string
+    for _, season := range s.EmbeddedSeasons.Seasons {
+        seasonIds = append(seasonIds, strconv.FormatInt(season.Id, 10))
+    }
+
+    // 3. Fetch all episodes in season for all seasons via a third API call
+    var allEpisodes AllEpisodes
+    for _, seasonId := range seasonIds {
+        url = jsonEpisodesInSeason + seasonId
+        b = getPage(url)
+        err = json.Unmarshal(b, &allEpisodes)
+        checkerr(err)
+
+        // Populate episodes array via GetEpisode call for each episode
+        for _, episode := range allEpisodes.EmbeddedEpisodes.Videos {
+            episodes = append(episodes, GetEpisode(strconv.FormatInt(episode.Id, 10)))
+        }
+    }
+    return
+}
 
 // GetEpisode parses the information for an episode of a show
 // Returns the episode information
@@ -187,23 +219,53 @@ func GetEpisode(episodeId string) (e Episode) {
     var p Program
     err := json.Unmarshal(b, &p)
     checkerr(err)
-    e.Broadcasted = parseDateTime(p.Publish_at)
+
+    if len(p.Broadcasts) > 0 { // If broadcast date exist, use it
+        e.Broadcasted = parseDateTime(p.Broadcasts[0].Air_at)
+    } else { // Else use the upload date
+        e.Broadcasted = parseDateTime(p.Publish_at)
+    }
     e.Category = p.Format_categories[0].Name
-    e.Description = p.Description
-    e.EpisodeNumber, err = strconv.ParseInt(p.Format_position.Episode, 0, 64)
-    checkerr(err)
-    e.Season = p.Format_position.Season
+    e.Description = p.Summary
+    epNumber := p.Format_position.Episode
+    if len(epNumber) > 0 { // If episode number exists, use it
+        e.EpisodeNumber = epNumber
+        checkerr(err)
+    } else { // Else set to 0
+        e.EpisodeNumber = "0"
+    }
+    e.Season = strconv.FormatInt(p.Format_position.Season, 10)
     e.Length = (time.Duration(p.Duration) * time.Second).String()
-    // e.Live = p.Video.Live
+    e.Live = false // Always set to false, since TV3Play has no live streams
     e.PlayId = p.Id
-    e.Title = p.Format_title
-    e.Thumbnail = fixThumbnailAdress(p.Embedded.Format.Links.Image.Href)
+    e.Title = p.Title
+    e.Thumbnail = fixThumbnailUrl(p.Embedded.Format.Links.Image.Href)
+    
+
+    // Try to get HLS stream from stream link
+    url = jsonStreamUrl + episodeId
+    b = getPage(url)
+    var s AllStreams
+    err = json.Unmarshal(b, &s)
+    checkerr(err)
+
+    if len(s.Streams.Hls) > 0 { // If HLS stream exists, use it
+        e.VideoUrl = fixHlsUrl(s.Streams.Hls)
+    } else { // Else use the sharing url to link to the provider page
+        e.VideoUrl = p.Sharing.Url
+    }
     return
+}
+
+func fixHlsUrl(url string) (fixedUrl string) {
+    parts := strings.Split(url, ",")
+    fixedUrl = parts[0] + "," + parts[len(parts)-2] + "," + parts[len(parts)-1]
+    return 
 }
 
 
 // Replaces the size variable in the thumbnail url with the actually wanted size
-func fixThumbnailAdress(url string) string {
+func fixThumbnailUrl(url string) string {
     return strings.Replace(url, "{size}", thumbnailSize, 1)
 }
 
@@ -235,15 +297,4 @@ func checkerr(err error) {
     if err != nil {
         fmt.Println(err)
     }
-}
-
-func main() {
-    // Test getting all program ids
-    // programs := GetAllProgramIds()
-    // for _, prog := range programs {
-    //     fmt.Println(prog)
-    // }
-    
-    // Test getting episode info
-    fmt.Println(GetEpisode("556495"))
 }
