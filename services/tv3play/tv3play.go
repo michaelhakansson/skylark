@@ -1,5 +1,4 @@
 package tv3play
-// package main
 
 import(
     "bytes"
@@ -38,7 +37,7 @@ const(
 type Show struct {
     PlayId string
     PlayService string
-    Title string `json:"title"`
+    Title string
 }
 
 // struct for episode information
@@ -46,11 +45,11 @@ type Episode struct {
     Broadcasted time.Time
     Category string
     Description string
-    EpisodeNumber int64
+    EpisodeNumber string
     Length string
     Live bool
     PlayId int64
-    Season int64
+    Season string
     Thumbnail string
     Title string
     VideoUrl string
@@ -184,7 +183,6 @@ func GetShow(showId string) (show Show, episodes []Episode) {
     show.PlayId = showId
     show.PlayService = playService
 
-
     // 2. Fetch all seasons and id's via another API call
     var s AllSeasons
     url = jsonSeasonsInShow + showId
@@ -231,12 +229,12 @@ func GetEpisode(episodeId string) (e Episode) {
     e.Description = p.Summary
     epNumber := p.Format_position.Episode
     if len(epNumber) > 0 { // If episode number exists, use it
-        e.EpisodeNumber, err = strconv.ParseInt(epNumber, 0, 64)
+        e.EpisodeNumber = epNumber
         checkerr(err)
     } else { // Else set to 0
-        e.EpisodeNumber = 0
+        e.EpisodeNumber = "0"
     }
-    e.Season = p.Format_position.Season
+    e.Season = strconv.FormatInt(p.Format_position.Season, 10)
     e.Length = (time.Duration(p.Duration) * time.Second).String()
     e.Live = false // Always set to false, since TV3Play has no live streams
     e.PlayId = p.Id
@@ -300,15 +298,3 @@ func checkerr(err error) {
         fmt.Println(err)
     }
 }
-
-// func main() {
-//     // Test getting all program ids
-//     // programs := GetAllProgramIds()
-//     // for _, prog := range programs {
-//     //     fmt.Println(prog)
-//     // }
-    
-//     // Test getting episode info
-//     // fmt.Println(GetEpisode("556495"))
-//     fmt.Println(GetShow("804"))
-// }
