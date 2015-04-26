@@ -6,6 +6,7 @@ import(
     "log"
     "io/ioutil"
     "net/http"
+    "strconv"
     "strings"
     "time"
     "github.com/PuerkitoBio/goquery"
@@ -68,6 +69,12 @@ type Streams struct {
 // Returns an array of all the id's in the form of a string array
 func GetAllProgramIds() (ids []string) {
     page := getPage(allProgramsPage)
+    ids = parseAllProgramsPage(page)
+    return
+}
+
+// parseAllProgramsPage parses all the programs that are available on the service
+func parseAllProgramsPage(page []byte) (ids []string) {
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
@@ -82,33 +89,19 @@ func GetAllProgramIds() (ids []string) {
 // GetShow fetches the information and all the episodes for a show
 func GetShow(showId string) (show Show, episodes []Episode) {
     page := getPage(allProgramsPage + "/" + showId)
-    reader := bytes.NewReader(page)
-    doc, err := goquery.NewDocumentFromReader(reader)
-    checkerr(err)
-    show.Title = doc.Find(".content-header h1").Text()
-    show.PlayService = playService
-    show.PlayId = showId
-    linkToSeason, _ := doc.Find(".season .season-info a").First().Attr("href")
-    var seasonLinks []string
-    page = getPage(playUrlBase + linkToSeason)
-    reader = bytes.NewReader(page)
-    doc, err = goquery.NewDocumentFromReader(reader)
-    doc.Find(".season-intro a").Each(func(i int, s *goquery.Selection) {
-        if (s.HasClass("paging-button")) {
-            season, _ := s.Attr("href")
-            seasonLinks = append(seasonLinks, season)
-        }
-    })
+
+    show, linkToSeasonsPage := parseShowInfo(page, showId)
+
+    page = getPage(playUrlBase + linkToSeasonsPage)
+    seasonLinks := parseSeasonLinks(page)
+
     var episodeLinks []string
     for _, sLink := range seasonLinks {
         page = getPage(playUrlBase + sLink)
-        reader = bytes.NewReader(page)
-        doc, err = goquery.NewDocumentFromReader(reader)
-        doc.Find(".sbs-video-season-episode-teaser .right-column .title a").Each(func(i int, s *goquery.Selection) {
-            episode, _ := s.Attr("href")
-            episodeLinks = append(episodeLinks, episode)
-        })
+        eLinks := parseEpisodeLinksOnSeasonPage(page)
+        episodeLinks = append(episodeLinks, eLinks...)
     }
+
     for _, eLink := range episodeLinks {
         split := strings.Split(eLink, "/")
         cleanId := split[len(split) - 1]
@@ -118,11 +111,55 @@ func GetShow(showId string) (show Show, episodes []Episode) {
     return
 }
 
-// GetEpisode parses the information for an episode of a show
+// parseShowInfo parses the information about a show on the show page
+func parseShowInfo(page []byte, showId string) (show Show, linkToSeasonsPage string) {
+    reader := bytes.NewReader(page)
+    doc, err := goquery.NewDocumentFromReader(reader)
+    checkerr(err)
+    show.Title = doc.Find(".content-header h1").Text()
+    show.PlayService = playService
+    show.PlayId = showId
+    linkToSeasonsPage, _ = doc.Find(".season .season-info a").First().Attr("href")
+    return
+}
+
+// parseSeasonLinks parses all links to the available season of a show
+func parseSeasonLinks(page []byte) (linksToSeasons []string) {
+    reader := bytes.NewReader(page)
+    doc, err := goquery.NewDocumentFromReader(reader)
+    checkerr(err)
+    doc.Find(".season-intro a").Each(func(i int, s *goquery.Selection) {
+        if (s.HasClass("paging-button")) {
+            season, _ := s.Attr("href")
+            linksToSeasons = append(linksToSeasons, season)
+        }
+    })
+    return
+}
+
+// parseEpisodeLinksOnSeasonPage parses all links to episodes that are available on the season page
+func parseEpisodeLinksOnSeasonPage(page []byte) (episodeLinks []string) {
+    reader := bytes.NewReader(page)
+    doc, err := goquery.NewDocumentFromReader(reader)
+    checkerr(err)
+    doc.Find(".sbs-video-season-episode-teaser .right-column .title a").Each(func(i int, s *goquery.Selection) {
+        episode, _ := s.Attr("href")
+        episodeLinks = append(episodeLinks, episode)
+    })
+    return
+}
+
+// GetEpisode fetches the information for an episode of a show
 // Returns the episode information
 func GetEpisode(episodeId string) (episode Episode) {
     url := jsonVideoOutputString + episodeId
     page := getPage(url)
+    episode = parseEpisode(page)
+    return
+}
+
+// parseEpisode parses the episode information provided by the api
+func parseEpisode(page []byte) (episode Episode) {
     var a Api
     err := json.Unmarshal(page, &a)
     checkerr(err)
