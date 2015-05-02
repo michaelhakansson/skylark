@@ -100,6 +100,12 @@ type Item struct {
 // Returns an array of all the id's in the form of a string array
 func GetAllProgramIds() (ids []string) {
     page := getPage(allProgramsPage)
+    ids = parseAllProgramsPage(page)
+    return
+}
+
+// parseAllProgramsPage parses all the programs that are available on the service
+func parseAllProgramsPage(page []byte) (ids []string) {
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
@@ -174,38 +180,48 @@ func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
 // Returns the episode information
 func GetEpisode(episodeId string) (episode Episode) {
     url := videoUrlBase + episodeId + jsonVideoOutputString
-    b := getPage(url)
-    var p Program
-    err := json.Unmarshal(b, &p)
-    checkerr(err)
-    episode.Broadcasted = parseDateTime(p.Statistics.BroadcastDate, p.Statistics.BroadcastTime)
-    episode.Category = p.Statistics.Category
-    episode.Description = parseDescription(episodeId)
-    episode.Length = (time.Duration(p.Video.MaterialLength) * time.Second).String()
-    episode.Live = p.Video.Live
-    episode.PlayId = p.VideoId
-    episode.Season, episode.EpisodeNumber = parseSeasonEpisodeNumbers(p)
-    episode.Title = p.Context.Title
-    episode.Thumbnail = p.Context.ThumbnailImage
-    for _, vref := range p.Video.VideoReferences {
-        if vref.PlayerType == "ios" {
-            episode.VideoUrl = vref.Url
-        }
-    }
+    page := getPage(url)
+    episode = parseEpisode(page, episodeId)
     return
 }
 
-// getPage fetches the content from a specified url
-func getPage(url string) []byte {
-    client := &http.Client{}
-    req, err := http.NewRequest("GET", url, nil)
+// Parses the json episode data
+func parseEpisode(page []byte, episodeId string) (episode Episode) {
+    var program Program
+    err := json.Unmarshal(page, &program)
     checkerr(err)
-    req.Header.Set("User-Agent", useragent)
-    resp, err := client.Do(req)
-    defer resp.Body.Close()
-    checkerr(err)
-    b, _ := ioutil.ReadAll(resp.Body)
-    return b
+    episode = parseBasicEpisodeInformation(program, episodeId)
+    episode.Broadcasted = parseDateTime(program.Statistics.BroadcastDate, program.Statistics.BroadcastTime)
+    episode.Description = parseDescription(episodeId)
+    episode.Length = convertLengthToString(program.Video.MaterialLength)
+    episode.Season, episode.EpisodeNumber = parseSeasonEpisodeNumbers(program.Statistics.Title)
+    episode.VideoUrl = getVideoUrl(program)
+    return
+}
+
+// Parses the basic information (no conversions needs) from the Program object to Episode object
+func parseBasicEpisodeInformation(program Program, episodeId string) (episode Episode) {
+    episode.Category = program.Statistics.Category
+    episode.Live = program.Video.Live
+    episode.PlayId = program.VideoId
+    episode.Title = program.Context.Title
+    episode.Thumbnail = program.Context.ThumbnailImage
+    return
+}
+
+// Gets the url to "ios-friendly" video
+func getVideoUrl(program Program) string {
+    for _, vref := range program.Video.VideoReferences {
+        if vref.PlayerType == "ios" {
+            return vref.Url
+        }
+    }
+    return ""
+}
+
+// Converts the length value to "human-readable" string
+func convertLengthToString(length int64) string {
+    return (time.Duration(length) * time.Second).String()
 }
 
 // parseDescription fetches the description for an episode
@@ -236,11 +252,10 @@ func parseDateTime(d string, t string) (datetime time.Time){
 // If the episode do not have these numbers, the season number is set to the date
 // it was broadcast and the episode number is set to the time it was broadcasted
 // Returns the numbers as strings
-func parseSeasonEpisodeNumbers(p Program) (season string, episode string) {
-    t := p.Statistics.Title
+func parseSeasonEpisodeNumbers(seasonepisode string) (season string, episode string) {
     letters, _ := regexp.Compile(`^([a-z])`)
-    foundLetters := letters.MatchString(t)
-    s := strings.Split(t, "-")
+    foundLetters := letters.MatchString(seasonepisode)
+    s := strings.Split(seasonepisode, "-")
     if foundLetters {
         if len(s) >= 4 {
             season = s[1]
@@ -254,6 +269,19 @@ func parseSeasonEpisodeNumbers(p Program) (season string, episode string) {
         episode = s[2] + ":" + s[3]
     }
     return
+}
+
+// getPage fetches the content from a specified url
+func getPage(url string) []byte {
+    client := &http.Client{}
+    req, err := http.NewRequest("GET", url, nil)
+    checkerr(err)
+    req.Header.Set("User-Agent", useragent)
+    resp, err := client.Do(req)
+    defer resp.Body.Close()
+    checkerr(err)
+    b, _ := ioutil.ReadAll(resp.Body)
+    return b
 }
 
 // checkerr checks if an error has occured and logs it if has.
