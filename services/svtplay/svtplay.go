@@ -181,21 +181,27 @@ func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
 func GetEpisode(episodeId string) (episode Episode) {
     url := videoUrlBase + episodeId + jsonVideoOutputString
     page := getPage(url)
-    episode = parseEpisode(page, episodeId)
+    url = videoUrlBase + episodeId
+    descriptionpage := getPage(url)
+    episode = parseEpisode(page, descriptionpage, episodeId)
     return
 }
 
 // Parses the json episode data
-func parseEpisode(page []byte, episodeId string) (episode Episode) {
-    var program Program
-    err := json.Unmarshal(page, &program)
-    checkerr(err)
+func parseEpisode(page []byte, descriptionpage []byte, episodeId string) (episode Episode) {
+    program := parseJSON(page)
     episode = parseBasicEpisodeInformation(program, episodeId)
     episode.Broadcasted = parseDateTime(program.Statistics.BroadcastDate, program.Statistics.BroadcastTime)
-    episode.Description = parseDescription(episodeId)
+    episode.Description = parseDescription(descriptionpage)
     episode.Length = convertLengthToString(program.Video.MaterialLength)
     episode.Season, episode.EpisodeNumber = parseSeasonEpisodeNumbers(program.Statistics.Title)
-    episode.VideoUrl = getVideoUrl(program)
+    episode.VideoUrl = getVideoUrl(program.Video.VideoReferences)
+    return
+}
+
+func parseJSON(page []byte) (program Program) {
+    err := json.Unmarshal(page, &program)
+    checkerr(err)
     return
 }
 
@@ -210,8 +216,8 @@ func parseBasicEpisodeInformation(program Program, episodeId string) (episode Ep
 }
 
 // Gets the url to "ios-friendly" video
-func getVideoUrl(program Program) string {
-    for _, vref := range program.Video.VideoReferences {
+func getVideoUrl(vrefs []VideoReferences) string {
+    for _, vref := range vrefs {
         if vref.PlayerType == "ios" {
             return vref.Url
         }
@@ -224,12 +230,10 @@ func convertLengthToString(length int64) string {
     return (time.Duration(length) * time.Second).String()
 }
 
-// parseDescription fetches the description for an episode
+// parseDescription parses the description for an episode
 // Returns the description as a string
-func parseDescription(episodeId string) (description string) {
-    url := videoUrlBase + episodeId
-    b := getPage(url)
-    reader := bytes.NewReader(b)
+func parseDescription(page []byte) (description string) {
+    reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
     description = doc.Find(".play_video-area-aside__info-text").First().Text()
