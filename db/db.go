@@ -109,7 +109,7 @@ season string, thumbnail string, title string, videourl string) bool {
         log.Fatal(err)
         return false
     }
-    log.Printf("Added episode %s to show %s", episode.PlayId, show.Title)
+    log.Printf("Added episode %d to show %s", episode.PlayId, show.Title)
     return true
 }
 
@@ -118,9 +118,9 @@ func UpdateEpisode(showid bson.ObjectId, episode Episode) bool {
     defer session.Close()
     c := session.DB(db).C("shows")
     show := GetShowById(showid)
-    for _, e := range show.Episodes {
+    for i, e := range show.Episodes {
         if e.PlayId == episode.PlayId {
-            e = episode
+            show.Episodes[i] = episode
         }
     }
     _, err := c.UpsertId(showid, show)
