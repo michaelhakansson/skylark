@@ -2,7 +2,7 @@ package main
 
 import(
     "log"
-    //    "time"
+    "time"
     "github.com/michaelhakansson/skylark/services/svtplay"
     "github.com/michaelhakansson/skylark/services/tv3play"
     "github.com/michaelhakansson/skylark/services/kanal5play"
@@ -11,19 +11,14 @@ import(
 )
 
 const freshnessLimit float64 = 0.5
+var services []string = []string{"svtplay", "tv3play", "kanal5play"}
 
 func syncAll() {
-    var showIds []string
-    var playservice string
-    for _, action := range []func() {
-            func() { showIds, playservice = svtplay.GetAllProgramIds() },
-            func() { showIds, playservice = tv3play.GetAllProgramIds() },
-            func() { showIds, playservice = kanal5play.GetAllProgramIds() }
-        } {
-        action()
+    for _, service := range services {
+        ids := getIdsWithService(service)
         // Add all shows and episodes to the DB
-        for _, id := range showIds {
-            syncShow(id, playservice)
+        for _, id := range ids {
+            syncShow(id, service)
         }
     }
 }
@@ -35,6 +30,15 @@ func syncShow(showId string, playservice string) {
     for _, episode := range episodes {
         db.AddEpisode(dbShowObject.Id, episode)
     }
+}
+
+func getIdsWithService(playservice string) (ids []string) {
+    switch playservice {
+        case "svtplay": ids = svtplay.GetAllProgramIds()
+        case "tv3play": ids = tv3play.GetAllProgramIds()
+        case "kanal5play": ids = kanal5play.GetAllProgramIds()
+    }
+    return
 }
 
 func getShowWithService(showId string, playservice string) (show structures.Show, episodes []structures.Episode) {
@@ -59,13 +63,14 @@ func main() {
     go func() {
         timer := time.Tick(15 * time.Minute)
         for now := range timer {
+            log.Println(now)
             showIds := db.GetAllShowIds()
             for _, showId := range showIds {
                 go func() {
                     show := db.GetShowByPlayId(showId)
                     freshness := getShowFreshness(show)
                     if freshness < freshnessLimit {
-                        syncShow(showId)
+                        syncShow(showId, show.PlayService)
                     }
                 }()
             }
