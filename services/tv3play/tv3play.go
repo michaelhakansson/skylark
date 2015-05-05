@@ -140,7 +140,7 @@ type Formats struct {
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (programs []string, playservice string) {
+func GetAllProgramIds() (programs []string) {
     b := getPage(allProgramsMobileApi)
     var api Api
     err := json.Unmarshal(b, &api)
@@ -150,8 +150,6 @@ func GetAllProgramIds() (programs []string, playservice string) {
             programs = append(programs, id.Id)
         }
     }
-
-    playservice = playService
 
     /*// Get all program links from the program list
     b := getPage(allProgramsPage)

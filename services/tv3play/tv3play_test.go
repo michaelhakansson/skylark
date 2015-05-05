@@ -186,7 +186,7 @@ func TestGetEpisode(t *testing.T) {
 
 func TestProgramIds(t *testing.T) {
     log.Print("TestProgramIds")
-    programs, _ := GetAllProgramIds()
+    programs := GetAllProgramIds()
     if len(programs) != 127 {
         t.Error(
             "For", "GetAllProgramsIds",
