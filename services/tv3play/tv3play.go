@@ -8,6 +8,7 @@ import(
     "net/http"
     "strconv"
     "strings"
+    "sync"
     "time"
     "github.com/michaelhakansson/skylark/structures"
     //    "github.com/PuerkitoBio/goquery"
@@ -109,6 +110,7 @@ type EmbeddedEpisodes struct {
 
 type Videos struct {
     Id int64
+    Type string
 }
 
 // Structs for streams
@@ -212,10 +214,20 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
         err = json.Unmarshal(b, &allEpisodes)
         checkerr(err)
 
+        var wg sync.WaitGroup
         // Populate episodes array via GetEpisode call for each episode
         for _, episode := range allEpisodes.EmbeddedEpisodes.Videos {
-            episodes = append(episodes, GetEpisode(strconv.FormatInt(episode.Id, 10)))
+            wg.Add(1)
+            cleanId := strconv.FormatInt(episode.Id, 10)
+            go func() {
+                defer wg.Done()
+                if episode.Type != "clip" {
+                e := GetEpisode(cleanId)
+                episodes = append(episodes, e)
+            }
+            }()
         }
+        wg.Wait()
     }
     return
 }
@@ -268,7 +280,11 @@ func GetEpisode(episodeId string) (e structures.Episode) {
 
 func fixHlsUrl(url string) (fixedUrl string) {
     parts := strings.Split(url, ",")
-    fixedUrl = parts[0] + "," + parts[len(parts)-2] + "," + parts[len(parts)-1]
+    if len(parts) > 1 {
+        fixedUrl = parts[0] + "," + parts[len(parts)-2] + "," + parts[len(parts)-1]
+    } else {
+        fixedUrl = url
+    }
     return
 }
 
