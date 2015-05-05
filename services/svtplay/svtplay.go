@@ -9,6 +9,7 @@ import(
     "net/http"
     "regexp"
     "strings"
+    "sync"
     "time"
     "github.com/michaelhakansson/skylark/structures"
     "github.com/PuerkitoBio/goquery"
@@ -120,12 +121,18 @@ func parseShowXML(page []byte, showId string) (show structures.Show, episodes []
     show.PlayId = showId
     r, err := regexp.Compile(`\/\d+\/`)
     checkerr(err)
+    var wg sync.WaitGroup
     for _, item := range c.Item {
+        wg.Add(1)
         shortLink := r.FindString(item.Link)
         episodeId := strings.Replace(string(shortLink), "/", "", 2)
-        e := GetEpisode(episodeId)
-        episodes = append(episodes, e)
+        go func() {
+            defer wg.Done()
+            e := GetEpisode(episodeId)
+            episodes = append(episodes, e)
+        }()
     }
+    wg.Wait()
     return
 }
 
@@ -149,10 +156,16 @@ func parseShowPage(page []byte, showId string) (show structures.Show, episodes [
             ids = append(ids, cleanId)
         }
     })
+    var wg sync.WaitGroup
     for _, id := range ids {
-        e := GetEpisode(id)
-        episodes = append(episodes, e)
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            e := GetEpisode(id)
+            episodes = append(episodes, e)
+        }()
     }
+    wg.Wait()
     return
 }
 
@@ -243,6 +256,13 @@ func parseDateTime(d string, t string) (datetime time.Time){
 // it was broadcast and the episode number is set to the time it was broadcasted
 // Returns the numbers as strings
 func parseSeasonEpisodeNumbers(seasonepisode string) (season string, episode string) {
+    numbers, _ := regexp.Compile(`([0-9])`)
+    foundnumbers := numbers.MatchString(seasonepisode)
+    if !foundnumbers {
+        season = "0"
+        episode = seasonepisode
+        return
+    }
     letters, _ := regexp.Compile(`^([a-z])`)
     foundLetters := letters.MatchString(seasonepisode)
     s := strings.Split(seasonepisode, "-")
@@ -255,8 +275,13 @@ func parseSeasonEpisodeNumbers(seasonepisode string) (season string, episode str
             episode = s[1]
         }
     } else {
-        season = s[0] + "/" + s[1]
-        episode = s[2] + ":" + s[3]
+        if len(s) >= 4 {
+            season = s[0] + "/" + s[1]
+            episode = s[2] + ":" + s[3]
+        } else {
+            season = "0"
+            episode = s[0] + "/" + s[1]
+        }
     }
     return
 }
