@@ -9,6 +9,7 @@ import(
     "strconv"
     "strings"
     "time"
+    "github.com/michaelhakansson/skylark/structures"
     //    "github.com/PuerkitoBio/goquery"
 )
 
@@ -33,28 +34,6 @@ const(
     thumbnailSize string = "200x200"
     allProgramsMobileApi string = "http://legacy.tv3play.se/mobileapi/format"
 )
-
-// struct for show information
-type Show struct {
-    PlayId string
-    PlayService string
-    Title string
-}
-
-// struct for episode information
-type Episode struct {
-    Broadcasted time.Time
-    Category string
-    Description string
-    EpisodeNumber string
-    Length string
-    Live bool
-    PlayId int64
-    Season string
-    Thumbnail string
-    Title string
-    VideoUrl string
-}
 
 // structs for an episode's json output
 type Program struct {
@@ -159,7 +138,7 @@ type Formats struct {
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (programs []string) {
+func GetAllProgramIds() (programs []string, playservice string) {
     b := getPage(allProgramsMobileApi)
     var api Api
     err := json.Unmarshal(b, &api)
@@ -169,6 +148,9 @@ func GetAllProgramIds() (programs []string) {
             programs = append(programs, id.Id)
         }
     }
+
+    playservice = playService
+
     /*// Get all program links from the program list
     b := getPage(allProgramsPage)
     reader := bytes.NewReader(b)
@@ -199,7 +181,7 @@ func GetAllProgramIds() (programs []string) {
 }
 
 // GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (show Show, episodes []Episode) {
+func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
     // 1. Build show info using API call
     url := jsonShowUrl + showId
     b := getPage(url)
@@ -238,7 +220,7 @@ func GetShow(showId string) (show Show, episodes []Episode) {
 
 // GetEpisode parses the information for an episode of a show
 // Returns the episode information
-func GetEpisode(episodeId string) (e Episode) {
+func GetEpisode(episodeId string) (e structures.Episode) {
     url := jsonVideoOutputString + episodeId
     b := getPage(url)
     var p Program

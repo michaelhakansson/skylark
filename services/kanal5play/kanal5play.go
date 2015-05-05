@@ -9,6 +9,7 @@ import(
     "strconv"
     "strings"
     "time"
+    "github.com/michaelhakansson/skylark/structures"
     "github.com/PuerkitoBio/goquery"
 )
 
@@ -21,28 +22,6 @@ const(
     allProgramsPage string = playUrlBase + "program"
     rssUrl string = "/rss.xml"
 )
-
-// struct for show information
-type Show struct {
-    PlayId string
-    PlayService string
-    Title string
-}
-
-// struct for episode information
-type Episode struct {
-    Broadcasted time.Time
-    Category string
-    Description string
-    EpisodeNumber string
-    Length string
-    Live bool
-    PlayId int64
-    Season string
-    Thumbnail string
-    Title string
-    VideoUrl string
-}
 
 // struct for json api
 type Api struct {
@@ -67,9 +46,10 @@ type Streams struct {
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (ids []string) {
+func GetAllProgramIds() (ids []string, playservice string) {
     page := getPage(allProgramsPage)
     ids = parseAllProgramsPage(page)
+    playservice = playService
     return
 }
 
@@ -87,7 +67,7 @@ func parseAllProgramsPage(page []byte) (ids []string) {
 }
 
 // GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (show Show, episodes []Episode) {
+func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
     page := getPage(allProgramsPage + "/" + showId)
 
     show, linkToSeasonsPage := parseShowInfo(page, showId)
@@ -112,7 +92,7 @@ func GetShow(showId string) (show Show, episodes []Episode) {
 }
 
 // parseShowInfo parses the information about a show on the show page
-func parseShowInfo(page []byte, showId string) (show Show, linkToSeasonsPage string) {
+func parseShowInfo(page []byte, showId string) (show structures.Show, linkToSeasonsPage string) {
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
@@ -151,7 +131,7 @@ func parseEpisodeLinksOnSeasonPage(page []byte) (episodeLinks []string) {
 
 // GetEpisode fetches the information for an episode of a show
 // Returns the episode information
-func GetEpisode(episodeId string) (episode Episode) {
+func GetEpisode(episodeId string) (episode structures.Episode) {
     url := jsonVideoOutputString + episodeId
     page := getPage(url)
     episode = parseEpisode(page)
@@ -159,7 +139,7 @@ func GetEpisode(episodeId string) (episode Episode) {
 }
 
 // parseEpisode parses the episode information provided by the api
-func parseEpisode(page []byte) (episode Episode) {
+func parseEpisode(page []byte) (episode structures.Episode) {
     var a Api
     err := json.Unmarshal(page, &a)
     checkerr(err)

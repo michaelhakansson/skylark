@@ -2,7 +2,8 @@ package db
 
 import(
     "log"
-    "time"
+//    "time"
+    "github.com/michaelhakansson/skylark/structures"
     "gopkg.in/mgo.v2"
     "gopkg.in/mgo.v2/bson"
 )
@@ -11,29 +12,6 @@ const(
     uri string = "mongodb://localhost:27017/skylark"
     db string = "skylark"
 )
-
-type Show struct {
-    Id bson.ObjectId `bson:"_id,omitempty"`
-    Title string `bson:"title"`
-    PlayId string `bson:"playid"`
-    PlayService string `bson:"playservice"`
-    Episodes []Episode `bson:"episodes"`
-}
-
-type Episode struct {
-    Freshness float64 `bson:"freshness"`
-    Broadcasted time.Time `bson:"broadcasted"`
-    Category string `bson:"category"`
-    Description string `bson:"description"`
-    EpisodeNumber string `bson:"episodenumber"`
-    Length string `bson:"length"`
-    Live bool `bson:"live"`
-    PlayId int64 `bson:"playid"`
-    Season string `bson:"season"`
-    Thumbnail string `bson:"thumbnail"`
-    Title string `bson:"title"`
-    VideoUrl string `bson:"videourl"`
-}
 
 func Connect() *mgo.Session {
     session, err := mgo.Dial(uri)
@@ -44,7 +22,7 @@ func Connect() *mgo.Session {
     return session
 }
 
-func AddShow(title string, playid string, playservice string) (result bool, show Show) {
+func AddShow(title string, playid string, playservice string) (result bool, show structures.Show) {
     result = false
     session := Connect()
     defer session.Close()
@@ -53,8 +31,8 @@ func AddShow(title string, playid string, playservice string) (result bool, show
     if err != nil || count > 0 {
         return
     }
-    var episodes []Episode
-    show = Show{Id: bson.NewObjectId(), Title: title, PlayId: playid,
+    var episodes []structures.Episode
+    show = structures.Show{Id: bson.NewObjectId(), Title: title, PlayId: playid,
     PlayService: playservice, Episodes: episodes}
 
     err = c.Insert(show)
@@ -67,11 +45,11 @@ func AddShow(title string, playid string, playservice string) (result bool, show
     return
 }
 
-func GetShowByPlayId(playid string) Show {
+func GetShowByPlayId(playid string) structures.Show {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    var s Show
+    var s structures.Show
     err := c.Find(bson.M{"playid": playid}).One(&s)
     if err != nil {
         log.Fatal(err)
@@ -79,11 +57,11 @@ func GetShowByPlayId(playid string) Show {
     return s
 }
 
-func GetShowById(showid bson.ObjectId) Show {
+func GetShowById(showid bson.ObjectId) structures.Show {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    var s Show
+    var s structures.Show
     err := c.Find(bson.M{"_id": showid}).One(&s)
     if err != nil {
         log.Fatal(err)
@@ -95,7 +73,7 @@ func GetAllShowIds() (showIds []string) {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    var shows []Show
+    var shows []structures.Show
     err := c.Find(bson.M{}).All(&shows)
     if err != nil {
         log.Fatal(err)
@@ -106,24 +84,19 @@ func GetAllShowIds() (showIds []string) {
     return
 }
 
-func AddEpisode(showid bson.ObjectId, broadcasted time.Time, category string,
-description string, episodenumber string, length string, live bool, playid int64,
-season string, thumbnail string, title string, videourl string) bool {
+func AddEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    episode := &Episode{Freshness: 1, Broadcasted: broadcasted,
-    Category: category, Description: description, EpisodeNumber: episodenumber,
-    Length: length, Live: live, PlayId: playid, Season: season, Thumbnail:
-    thumbnail, Title: title, VideoUrl: videourl}
+    episode.Freshness = 1
     show := GetShowById(showid)
     for _, e := range show.Episodes {
-        if e.PlayId == playid {
-            UpdateEpisode(showid, *episode)
+        if e.PlayId == episode.PlayId {
+            UpdateEpisode(showid, episode)
             return true
         }
     }
-    show.Episodes = append(show.Episodes, *episode)
+    show.Episodes = append(show.Episodes, episode)
     _, err := c.UpsertId(showid, show)
     if err != nil {
         log.Fatal(err)
@@ -133,7 +106,7 @@ season string, thumbnail string, title string, videourl string) bool {
     return true
 }
 
-func UpdateEpisode(showid bson.ObjectId, episode Episode) bool {
+func UpdateEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")

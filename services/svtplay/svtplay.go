@@ -10,6 +10,7 @@ import(
     "regexp"
     "strings"
     "time"
+    "github.com/michaelhakansson/skylark/structures"
     "github.com/PuerkitoBio/goquery"
 )
 
@@ -22,28 +23,6 @@ const(
     allProgramsPage string = playUrlBase + "program"
     rssUrl string = "/rss.xml"
 )
-
-// struct for show information
-type Show struct {
-    PlayId string
-    PlayService string
-    Title string
-}
-
-// struct for episode information
-type Episode struct {
-    Broadcasted time.Time
-    Category string
-    Description string
-    EpisodeNumber string
-    Length string
-    Live bool
-    PlayId int64
-    Season string
-    Thumbnail string
-    Title string
-    VideoUrl string
-}
 
 // structs for an episode's json output
 type Program struct {
@@ -98,9 +77,10 @@ type Item struct {
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (ids []string) {
+func GetAllProgramIds() (ids []string, playservice string) {
     page := getPage(allProgramsPage)
     ids = parseAllProgramsPage(page)
+    playservice = playService
     return
 }
 
@@ -118,7 +98,7 @@ func parseAllProgramsPage(page []byte) (ids []string) {
 }
 
 // GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (Show, []Episode) {
+func GetShow(showId string) (structures.Show, []structures.Episode) {
     xmlUrl :=  playUrlBase + showId + rssUrl
     b := getPage(xmlUrl)
     if len(b) > 0 {
@@ -131,7 +111,7 @@ func GetShow(showId string) (Show, []Episode) {
 
 // parseShowXML parses the rss feed for a show
 // Returns the show information and all the episodes
-func parseShowXML(page []byte, showId string) (show Show, episodes []Episode) {
+func parseShowXML(page []byte, showId string) (show structures.Show, episodes []structures.Episode) {
     var c Channel
     err := xml.Unmarshal(page, &c)
     checkerr(err)
@@ -151,7 +131,7 @@ func parseShowXML(page []byte, showId string) (show Show, episodes []Episode) {
 
 // parseShowPage parses the website for a show
 // Returns the show information and all the episodes
-func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
+func parseShowPage(page []byte, showId string) (show structures.Show, episodes []structures.Episode) {
     var ids []string
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
@@ -178,7 +158,7 @@ func parseShowPage(page []byte, showId string) (show Show, episodes []Episode) {
 
 // GetEpisode parses the information for an episode of a show
 // Returns the episode information
-func GetEpisode(episodeId string) (episode Episode) {
+func GetEpisode(episodeId string) (episode structures.Episode) {
     url := videoUrlBase + episodeId + jsonVideoOutputString
     page := getPage(url)
     url = videoUrlBase + episodeId
@@ -188,7 +168,7 @@ func GetEpisode(episodeId string) (episode Episode) {
 }
 
 // Parses the json episode data
-func parseEpisode(page []byte, descriptionpage []byte, episodeId string) (episode Episode) {
+func parseEpisode(page []byte, descriptionpage []byte, episodeId string) (episode structures.Episode) {
     program := parseJSON(page)
     episode = parseBasicEpisodeInformation(program, episodeId)
     episode.Broadcasted = parseDateTime(program.Statistics.BroadcastDate, program.Statistics.BroadcastTime)
@@ -206,7 +186,7 @@ func parseJSON(page []byte) (program Program) {
 }
 
 // Parses the basic information (no conversions needs) from the Program object to Episode object
-func parseBasicEpisodeInformation(program Program, episodeId string) (episode Episode) {
+func parseBasicEpisodeInformation(program Program, episodeId string) (episode structures.Episode) {
     episode.Category = program.Statistics.Category
     episode.Live = program.Video.Live
     episode.PlayId = program.VideoId
@@ -243,6 +223,12 @@ func parseDescription(page []byte) (description string) {
 // parseDateTime parses the date and time for when an episode was broadcasted
 // Returns the date and time as an time object
 func parseDateTime(d string, t string) (datetime time.Time){
+    if len(d) == 0 {
+        d = "19840124"
+    }
+    if len(t) == 0 {
+        t = "0800"
+    }
     year := d[0:4]
     month := d[4:6]
     day := d[6:8]
