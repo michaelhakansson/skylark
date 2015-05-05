@@ -8,6 +8,7 @@ import(
     "net/http"
     "strconv"
     "strings"
+    "sync"
     "time"
     "github.com/michaelhakansson/skylark/structures"
     "github.com/PuerkitoBio/goquery"
@@ -77,17 +78,23 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
 
     var episodeLinks []string
     for _, sLink := range seasonLinks {
-        page = getPage(playUrlBase + sLink)
-        eLinks := parseEpisodeLinksOnSeasonPage(page)
-        episodeLinks = append(episodeLinks, eLinks...)
+            page = getPage(playUrlBase + sLink)
+            eLinks := parseEpisodeLinksOnSeasonPage(page)
+            episodeLinks = append(episodeLinks, eLinks...)
     }
 
+    var wg sync.WaitGroup
     for _, eLink := range episodeLinks {
+        wg.Add(1)
         split := strings.Split(eLink, "/")
         cleanId := split[len(split) - 1]
-        e := GetEpisode(cleanId)
-        episodes = append(episodes, e)
+        go func() {
+            defer wg.Done()
+            e := GetEpisode(cleanId)
+            episodes = append(episodes, e)
+        }()
     }
+    wg.Wait()
     return
 }
 
