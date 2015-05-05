@@ -35,13 +35,13 @@ func syncShow(showId string) {
 
 func getShowFreshness(show db.Show) (freshness float64) {
     for _, episode := range show.Episodes {
-        freshness = (freshness + episode.Freshness) / 2
+        freshness = (freshness + episode.Freshness)
     }
+    freshness /= len(show)
     return
 }
 
 func main() {
-
     go func() {
         timer := time.Tick(15 * time.Minute)
         for now := range timer {
@@ -57,6 +57,4 @@ func main() {
             }
         }
     }()
-
-
 }
