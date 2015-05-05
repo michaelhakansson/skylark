@@ -79,16 +79,16 @@ var testNumberOfEpisodes = []testshow {
 }
 
 var episodes = []testepisode {
-    {"556451", "2015 04 01 20:30:00 +0000 UTC", "Humor", 
+    {"556451", "2015 04 01 20:30:00 +0000 UTC", "Humor",
     "Mozart in the Jungle ger en vass inblick in i den klassiska musikvärlden med den prisbelönta Gael Garcia Bernal i huvudrollen. Serien, som är inspirerad av Blair Tindalls memoarer, följer de sexiga...",
-    "1", "28m0s", false, 556451, "1", 
+    "1", "28m0s", false, 556451, "1",
     "http://cdn.playapi.mtgx.tv/imagecache/" + thumbnailSize + "/cloud/content-images/seasons/11519/season/mozart_in_the_jungle_sasong1-bCeSdEa.jpg",
-    "Mozart in the Jungle S01E01", 
+    "Mozart in the Jungle S01E01",
     "http://mtgxpitcher01-vh.akamaihd.net/i/open/201502/04/V55883_mtgx_cbc2aea8_,1800,.mp4.csmil/master.m3u8?__b__=300&cc1=name=Svenska~default=yes~forced=no~lang=sv~uri=http://cdn.subtitles.mtgx.tv/pitcher/V5xxxx/V558xx/V55883/0000004229/V55883_sub_sv.m3u8"},
-    
+
     {"23636", "2009 09 01 21:30:00 +0000 UTC", "Samhälle och aktualitet",
     "I säsongspremiären av Adaktusson undrar vi varför svenska domare får sitta kvar trots att de dömts för allvarliga brott.",
-    "1", "24m49s", false, 23636, "6", 
+    "1", "24m49s", false, 23636, "6",
     "http://cdn.playapi.mtgx.tv/imagecache/" + thumbnailSize + "/cloud/content-images/sites/viastream.viasat.tv/files/category_pictures/adaktusson_s6.jpg",
     "Adaktusson 1/9", "http://www.tv8play.se/program/adaktusson/23636"},
 }
@@ -186,7 +186,7 @@ func TestGetEpisode(t *testing.T) {
 
 func TestProgramIds(t *testing.T) {
     log.Print("TestProgramIds")
-    programs := GetAllProgramIds()
+    programs, _ := GetAllProgramIds()
     if len(programs) != 445 {
         t.Error(
             "For", "GetAllProgramsIds",
