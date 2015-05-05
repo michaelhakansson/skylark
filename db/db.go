@@ -29,6 +29,8 @@ func AddShow(title string, playid string, playservice string) (result bool, show
     c := session.DB(db).C("shows")
     count, err := c.Find(bson.M{"playid": playid}).Count()
     if err != nil || count > 0 {
+        err = c.Find(bson.M{"playid": playid}).One(&show)
+        log.Printf("Show %s (%s) already exists", title, playid)
         return
     }
     var episodes []structures.Episode
@@ -121,6 +123,6 @@ func UpdateEpisode(showid bson.ObjectId, episode structures.Episode) bool {
         log.Fatal(err)
         return false
     }
-    log.Printf("Updated episode %s", episode.Title)
+    log.Printf("Updated episode %d", episode.PlayId)
     return true
 }
