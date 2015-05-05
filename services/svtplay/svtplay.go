@@ -78,10 +78,9 @@ type Item struct {
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (ids []string, playservice string) {
+func GetAllProgramIds() (ids []string) {
     page := getPage(allProgramsPage)
     ids = parseAllProgramsPage(page)
-    playservice = playService
     return
 }
 
