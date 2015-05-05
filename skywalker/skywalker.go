@@ -1,40 +1,62 @@
 package main
 
 import(
-    "log"
+    // "log"
+    "time"
     "github.com/michaelhakansson/skylark/services/svtplay"
     "github.com/michaelhakansson/skylark/services/tv3play"
     "github.com/michaelhakansson/skylark/services/kanal5play"
     "github.com/michaelhakansson/skylark/db"
 )
 
-// Services []interface{} = [svtplay, tv3play, kanal5play]
+const freshnessLimit float64 = 0.5
+
+func syncAll() {
+    for _, playService := range services {
+        showsIds := playService.GetAllProgramIds()
+
+        // Add all shows and episodes to the DB
+        for _, id := range showIds {
+            syncShow(id)
+        }
+    }
+}
+
+func syncShow(showId string) {
+    show, episodes := playService.GetShow(showId)
+    _, dbShowObject := db.AddShow(show.Title, show.PlayId, show.PlayService)
+
+    for _, episode := range episodes {
+        db.AddEpisode(dbShowObject.Id, episode.Broadcasted, episode.Category,
+            episode.Description, episode.Episodenumber, episode.Length, episode.Live, 
+            episode.Playid, episode.Season, episode.Thumbnail, episode.Title, episode.Videourl)
+    }
+}
+
+func getShowFreshness(show db.Show) (freshness float64) {
+    for _, episode := range show.Episodes {
+        freshness = (freshness + episode.Freshness) / 2
+    }
+    return
+}
 
 func main() {
 
-for i, _ := range []interface{}{svtplay,tv3play,kanal5play} {
-    log.Println(i)
-} 
+    go func() {
+        timer := time.Tick(15 * time.Minute)
+        for now := range timer {
+            showIds := db.GetAllShowIds()
+            for _, showId := range showIds {
+                go func() {
+                    show := db.GetShowByPlayId(showId)
+                    freshness := getShowFreshness(show)
+                    if freshness < freshnessLimit {
+                        syncShow(showId)
+                    }
+                }()
+            }
+        }
+    }()
 
-// A. For playService : services
-    // 1. Set freshness == 0 for all existing shows in the database
-
-    // 2. Get all program ids
-// showIds := GetAllProgramIds()
-
-// 3. Add all shows to the database - set freshness == 1
-    for _, e := range showIds {
-        // playService.GetShow(id string)
-        db.AddShow(title string, playid string, playservice string)
-        // TODO: Make AddShow return the object
-        db.AddEpisode(showid bson.ObjectId, broadcasted time.Time, category string,
-            description string, episodenumber string, length string, live bool, playid int64,
-            season string, thumbnail string, title string, videourl string)
-    }
-
-// B. The more often run loop for keeping often updated items fresher
-    // 1. For show : db
-    //   2. for episode : show
-    //     3. db.UpdateEpisode(service.GetEpisode)
 
 }

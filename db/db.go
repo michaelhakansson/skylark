@@ -21,6 +21,7 @@ type Show struct {
 }
 
 type Episode struct {
+    Freshness float64 `bson:"freshness"`
     Broadcasted time.Time `bson:"broadcasted"`
     Category string `bson:"category"`
     Description string `bson:"description"`
@@ -43,23 +44,27 @@ func Connect() *mgo.Session {
     return session
 }
 
-func AddShow(title string, playid string, playservice string) bool {
+func AddShow(title string, playid string, playservice string) (result bool, show Show) {
+    result = false
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
     count, err := c.Find(bson.M{"playid": playid}).Count()
     if err != nil || count > 0 {
-        return false
+        return
     }
     var episodes []Episode
-    err = c.Insert(&Show{Id: bson.NewObjectId(), Title: title, PlayId: playid,
-    PlayService: playservice, Episodes: episodes})
+    show = Show{Id: bson.NewObjectId(), Title: title, PlayId: playid,
+    PlayService: playservice, Episodes: episodes}
+
+    err = c.Insert(show)
     if err != nil {
         log.Fatal(err)
-        return false
+        return
     }
     log.Printf("Added %s", title)
-    return true
+    result = true
+    return
 }
 
 func GetShowByPlayId(playid string) Show {
@@ -86,13 +91,28 @@ func GetShowById(showid bson.ObjectId) Show {
     return s
 }
 
+func GetAllShowIds() (showIds []string) {
+    session := Connect()
+    defer session.Close()
+    c := session.DB(db).C("shows")
+    var shows []Show
+    err := c.Find(bson.M{}).All(&shows)
+    if err != nil {
+        log.Fatal(err)
+    }
+    for _, show := range shows {
+        showIds = append(showIds, show.PlayId)
+    }
+    return
+}
+
 func AddEpisode(showid bson.ObjectId, broadcasted time.Time, category string,
 description string, episodenumber string, length string, live bool, playid int64,
 season string, thumbnail string, title string, videourl string) bool {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    episode := &Episode{Broadcasted: broadcasted,
+    episode := &Episode{Freshness: 1, Broadcasted: broadcasted,
     Category: category, Description: description, EpisodeNumber: episodenumber,
     Length: length, Live: live, PlayId: playid, Season: season, Thumbnail:
     thumbnail, Title: title, VideoUrl: videourl}
