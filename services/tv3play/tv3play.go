@@ -1,7 +1,7 @@
 package tv3play
 
 import(
-    "bytes"
+    //    "bytes"
     "encoding/json"
     "fmt"
     "io/ioutil"
@@ -9,7 +9,7 @@ import(
     "strconv"
     "strings"
     "time"
-    "github.com/PuerkitoBio/goquery"
+    //    "github.com/PuerkitoBio/goquery"
 )
 
 const(
@@ -31,6 +31,7 @@ const(
     jsonStreamUrl string = apiUrlBase + "videos/stream/"
     xmlDateLayout string = "Mon, 2 Jan 2006 15:04:05 MST"
     thumbnailSize string = "200x200"
+    allProgramsMobileApi string = "http://legacy.tv3play.se/mobileapi/format"
 )
 
 // struct for show information
@@ -140,11 +141,35 @@ type Streams struct {
     Hls string
 }
 
+
+type Api struct {
+    Alphabet []string
+    Sections []Content
+}
+
+type Content struct {
+    Title string
+    Formats []Formats
+}
+
+type Formats struct {
+    Id string
+}
+
 // GetAllProgramIds fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
 func GetAllProgramIds() (programs []string) {
-    // Get all program links from the program list
+    b := getPage(allProgramsMobileApi)
+    var api Api
+    err := json.Unmarshal(b, &api)
+    checkerr(err)
+    for _, content := range api.Sections {
+        for _, id := range content.Formats {
+            programs = append(programs, id.Id)
+        }
+    }
+    /*// Get all program links from the program list
     b := getPage(allProgramsPage)
     reader := bytes.NewReader(b)
     doc, err := goquery.NewDocumentFromReader(reader)
@@ -156,7 +181,7 @@ func GetAllProgramIds() (programs []string) {
             links = append(links, link)
         })
     })
-    
+
     // Fetch all program ids by visiting all links and extracting
     // the id from the shows.
     for _, link := range links {
@@ -168,7 +193,7 @@ func GetAllProgramIds() (programs []string) {
         if len(id) > 0 {
             programs = append(programs, id)
         }
-    }
+    }*/
 
     return
 }
@@ -240,7 +265,7 @@ func GetEpisode(episodeId string) (e Episode) {
     e.PlayId = p.Id
     e.Title = p.Title
     e.Thumbnail = fixThumbnailUrl(p.Embedded.Format.Links.Image.Href)
-    
+
 
     // Try to get HLS stream from stream link
     url = jsonStreamUrl + episodeId
@@ -260,7 +285,7 @@ func GetEpisode(episodeId string) (e Episode) {
 func fixHlsUrl(url string) (fixedUrl string) {
     parts := strings.Split(url, ",")
     fixedUrl = parts[0] + "," + parts[len(parts)-2] + "," + parts[len(parts)-1]
-    return 
+    return
 }
 
 
