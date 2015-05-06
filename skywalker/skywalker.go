@@ -2,6 +2,7 @@ package main
 
 import(
     "log"
+    "sync"
     "time"
     "github.com/michaelhakansson/skylark/services/svtplay"
     "github.com/michaelhakansson/skylark/services/tv3play"
@@ -50,30 +51,41 @@ func getShowWithService(showId string, playservice string) (show structures.Show
     return
 }
 
-func getShowFreshness(show structures.Show) (freshness float64) {
-    for _, episode := range show.Episodes {
+func getShowFreshness(episodes []structures.Episode) (freshness float64) {
+    for _, episode := range episodes {
         freshness = (freshness + episode.Freshness)
     }
-    freshness /= float64(len(show.Episodes))
+    freshness /= float64(len(episodes))
     return
 }
 
+func syncLowFreshnessShows() {
+    var wg sync.WaitGroup
+    var showsToSync []structures.Show
+    showIds := db.GetAllShowIds()
+    for _, showId := range showIds {
+        wg.Add(1)
+        show := db.GetShowByPlayId(showId)
+        go func() {
+            defer wg.Done()
+            freshness := getShowFreshness(show.Episodes)
+            if freshness < freshnessLimit {
+                showsToSync = append(showsToSync, show)
+            }
+        }()
+        wg.Wait()
+        for _, show := range showsToSync {
+            syncShow(show.PlayId, show.PlayService)
+        }
+    }
+}
+
 func main() {
-    syncAll()
     go func() {
         timer := time.Tick(15 * time.Minute)
         for now := range timer {
             log.Println(now)
-            showIds := db.GetAllShowIds()
-            for _, showId := range showIds {
-                go func() {
-                    show := db.GetShowByPlayId(showId)
-                    freshness := getShowFreshness(show)
-                    if freshness < freshnessLimit {
-                        syncShow(showId, show.PlayService)
-                    }
-                }()
-            }
+            syncLowFreshnessShows()
         }
     }()
 }
