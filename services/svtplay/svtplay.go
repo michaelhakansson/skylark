@@ -109,14 +109,12 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
         show, episodeIds = parseShowPage(getPage(pageUrl), showId)
     }
     var wg sync.WaitGroup
-    log.Println(episodeIds)
     for _, id := range episodeIds {
         wg.Add(1)
         cleanId := strings.Replace(string(id), "/", "", 2)
         go func() {
             defer wg.Done()
             e := GetEpisode(cleanId)
-            log.Println(cleanId)
             episodes = append(episodes, e)
         }()
     }
