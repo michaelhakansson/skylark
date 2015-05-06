@@ -98,20 +98,35 @@ func parseAllProgramsPage(page []byte) (ids []string) {
 }
 
 // GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (structures.Show, []structures.Episode) {
+func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
     xmlUrl :=  playUrlBase + showId + rssUrl
     b := getPage(xmlUrl)
+    var episodeIds []string
     if len(b) > 0 {
-        return parseShowXML(b, showId)
+        show, episodeIds = parseShowXML(b, showId)
     } else {
         pageUrl := playUrlBase + showId
-        return parseShowPage(getPage(pageUrl), showId)
+        show, episodeIds = parseShowPage(getPage(pageUrl), showId)
     }
+    var wg sync.WaitGroup
+    log.Println(episodeIds)
+    for _, id := range episodeIds {
+        wg.Add(1)
+        cleanId := strings.Replace(string(id), "/", "", 2)
+        go func() {
+            defer wg.Done()
+            e := GetEpisode(cleanId)
+            log.Println(cleanId)
+            episodes = append(episodes, e)
+        }()
+    }
+    wg.Wait()
+    return
 }
 
 // parseShowXML parses the rss feed for a show
 // Returns the show information and all the episodes
-func parseShowXML(page []byte, showId string) (show structures.Show, episodes []structures.Episode) {
+func parseShowXML(page []byte, showId string) (show structures.Show, episodeIds []string) {
     var c Channel
     err := xml.Unmarshal(page, &c)
     checkerr(err)
@@ -120,25 +135,16 @@ func parseShowXML(page []byte, showId string) (show structures.Show, episodes []
     show.PlayId = showId
     r, err := regexp.Compile(`\/\d+\/`)
     checkerr(err)
-    var wg sync.WaitGroup
     for _, item := range c.Item {
-        wg.Add(1)
         shortLink := r.FindString(item.Link)
-        episodeId := strings.Replace(string(shortLink), "/", "", 2)
-        go func() {
-            defer wg.Done()
-            e := GetEpisode(episodeId)
-            episodes = append(episodes, e)
-        }()
+        episodeIds = append(episodeIds, shortLink)
     }
-    wg.Wait()
     return
 }
 
 // parseShowPage parses the website for a show
 // Returns the show information and all the episodes
-func parseShowPage(page []byte, showId string) (show structures.Show, episodes []structures.Episode) {
-    var ids []string
+func parseShowPage(page []byte, showId string) (show structures.Show, episodeIds []string) {
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
@@ -151,20 +157,9 @@ func parseShowPage(page []byte, showId string) (show structures.Show, episodes [
         link, _ := s.Find(".play_vertical-list__header-link").Attr("href")
         digi := r.FindString(link)
         if len(digi) > 0 {
-            cleanId := strings.Replace(string(digi), "/", "", 2)
-            ids = append(ids, cleanId)
+            episodeIds = append(episodeIds, digi)
         }
     })
-    var wg sync.WaitGroup
-    for _, id := range ids {
-        wg.Add(1)
-        go func() {
-            defer wg.Done()
-            e := GetEpisode(id)
-            episodes = append(episodes, e)
-        }()
-    }
-    wg.Wait()
     return
 }
 
