@@ -2,7 +2,7 @@ package db
 
 import(
     "log"
-//    "time"
+    "time"
     "github.com/michaelhakansson/skylark/structures"
     "gopkg.in/mgo.v2"
     "gopkg.in/mgo.v2/bson"
@@ -34,7 +34,7 @@ func AddShow(title string, playid string, playservice string) (result bool, show
         return
     }
     var episodes []structures.Episode
-    show = structures.Show{Id: bson.NewObjectId(), Title: title, PlayId: playid,
+    show = structures.Show{Id: bson.NewObjectId(), ChangeFrequence: 1, LastUpdated: time.Now(), Title: title, PlayId: playid,
     PlayService: playservice, Episodes: episodes}
 
     err = c.Insert(show)
@@ -45,6 +45,35 @@ func AddShow(title string, playid string, playservice string) (result bool, show
     log.Printf("Added %s", title)
     result = true
     return
+}
+
+func UpdateShow(showid bson.ObjectId) bool {
+    session := Connect()
+    defer session.Close()
+    c := session.DB(db).C("shows")
+    show := GetShowById(showid)
+    show.LastUpdated = time.Now()
+    _, err := c.Upsert(showid, show)
+    if err != nil {
+        log.Fatal(err)
+        return false
+    }
+    log.Printf("Updated show %s", show.Title)
+    return true
+}
+
+func UpdateShowWithData(show structures.Show) bool {
+    session := Connect()
+    defer session.Close()
+    c := session.DB(db).C("shows")
+    show.LastUpdated = time.Now()
+    _, err := c.UpsertId(show.Id, show)
+    if err != nil {
+        log.Fatal(err)
+        return false
+    }
+    log.Printf("Updated show %s with new data", show.Title)
+    return true
 }
 
 func GetShowByPlayId(playid string) structures.Show {
@@ -90,7 +119,6 @@ func AddEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    episode.Freshness = 1
     show := GetShowById(showid)
     for _, e := range show.Episodes {
         if e.PlayId == episode.PlayId {

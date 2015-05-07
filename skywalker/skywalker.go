@@ -2,7 +2,9 @@ package main
 
 import(
     "log"
-    "sync"
+    "math"
+    "sort"
+    //    "sync"
     "time"
     "github.com/michaelhakansson/skylark/services/svtplay"
     "github.com/michaelhakansson/skylark/services/tv3play"
@@ -21,6 +23,16 @@ func syncAll() {
         for _, id := range ids {
             syncShow(id, service)
         }
+    }
+    updateChangeFrequenceForAll()
+}
+
+func updateChangeFrequenceForAll() {
+    ids := db.GetAllShowIds()
+    for _, id := range ids {
+        show := db.GetShowByPlayId(id)
+        show.ChangeFrequence = calcChangeFrequence(show)
+        db.UpdateShowWithData(show)
     }
 }
 
@@ -51,41 +63,46 @@ func getShowWithService(showId string, playservice string) (show structures.Show
     return
 }
 
-func getShowFreshness(episodes []structures.Episode) (freshness float64) {
-    for _, episode := range episodes {
-        freshness = (freshness + episode.Freshness)
+func calcChangeFrequence(show structures.Show) float64 {
+    var tot float64
+    episodes := sortEpisodesByDate(show.Episodes)
+    n := len(episodes)
+    for i := 0; i < n - 1; i++ {
+        ed1 := episodes[i].Broadcasted
+        ed2 := episodes[i + 1].Broadcasted
+        delta := ed1.Sub(ed2).Hours()
+        delta = delta / 168
+        if delta > 2 || delta == 0 {
+            delta = 1
+        }
+        tot += delta
     }
-    freshness /= float64(len(episodes))
-    return
+    avg := tot / float64(n - 1)
+    if avg <= 0 {
+        avg = 1
+    }
+    cf := (1 / avg)
+    if math.IsNaN(cf) {
+        cf = 1
+    }
+    return cf
 }
 
-func syncLowFreshnessShows() {
-    var wg sync.WaitGroup
-    var showsToSync []structures.Show
-    showIds := db.GetAllShowIds()
-    for _, showId := range showIds {
-        wg.Add(1)
-        show := db.GetShowByPlayId(showId)
-        go func() {
-            defer wg.Done()
-            freshness := getShowFreshness(show.Episodes)
-            if freshness < freshnessLimit {
-                showsToSync = append(showsToSync, show)
-            }
-        }()
-        wg.Wait()
-        for _, show := range showsToSync {
-            syncShow(show.PlayId, show.PlayService)
-        }
+func sortEpisodesByDate(episodes []structures.Episode) (structures.Episodes) {
+    episodes_sorted := make(structures.Episodes, 0, len(episodes))
+    for _, episode := range episodes {
+        episodes_sorted = append(episodes_sorted, episode)
     }
+    sort.Sort(episodes_sorted)
+    return episodes_sorted
 }
 
 func main() {
     go func() {
-        timer := time.Tick(15 * time.Minute)
+        timer := time.Tick(10 * time.Minute)
         for now := range timer {
             log.Println(now)
-            syncLowFreshnessShows()
+            // Sync shows according to lastupdated and change frequence
         }
     }()
 }
