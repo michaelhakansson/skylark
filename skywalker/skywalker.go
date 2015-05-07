@@ -24,14 +24,14 @@ func syncAll() {
             syncShow(id, service)
         }
     }
-    updateChangeFrequenceForAll()
+    updateChangeFrequencyForAll()
 }
 
-func updateChangeFrequenceForAll() {
+func updateChangeFrequencyForAll() {
     ids := db.GetAllShowIds()
     for _, id := range ids {
         show := db.GetShowByPlayId(id)
-        show.ChangeFrequence = calcChangeFrequence(show)
+        show.ChangeFrequency = calcChangeFrequency(show)
         db.UpdateShowWithData(show)
     }
 }
@@ -63,7 +63,7 @@ func getShowWithService(showId string, playservice string) (show structures.Show
     return
 }
 
-func calcChangeFrequence(show structures.Show) float64 {
+func calcChangeFrequency(show structures.Show) float64 {
     var tot float64
     episodes := sortEpisodesByDate(show.Episodes)
     n := len(episodes)

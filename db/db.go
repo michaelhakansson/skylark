@@ -34,7 +34,7 @@ func AddShow(title string, playid string, playservice string) (result bool, show
         return
     }
     var episodes []structures.Episode
-    show = structures.Show{Id: bson.NewObjectId(), ChangeFrequence: 1, LastUpdated: time.Now(), Title: title, PlayId: playid,
+    show = structures.Show{Id: bson.NewObjectId(), ChangeFrequency: 1, LastUpdated: time.Now(), Title: title, PlayId: playid,
     PlayService: playservice, Episodes: episodes}
 
     err = c.Insert(show)

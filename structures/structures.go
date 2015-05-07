@@ -7,7 +7,7 @@ import(
 
 type Show struct {
     Id bson.ObjectId `bson:"_id,omitempty"`
-    ChangeFrequence float64 `bson:"changefrequence"`
+    ChangeFrequency float64 `bson:"changefrequency"`
     LastUpdated time.Time `bson:"lastupdated"`
     Title string `bson:"title"`
     PlayId string `bson:"playid"`
