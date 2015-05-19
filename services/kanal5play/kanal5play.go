@@ -8,7 +8,6 @@ import(
     "net/http"
     "strconv"
     "strings"
-    "sync"
     "time"
     "github.com/michaelhakansson/skylark/structures"
     "github.com/PuerkitoBio/goquery"
@@ -74,7 +73,6 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
 
     page = getPage(playUrlBase + linkToSeasonsPage)
     seasonLinks := parseSeasonLinks(page)
-
     var episodeLinks []string
     for _, sLink := range seasonLinks {
             page = getPage(playUrlBase + sLink)
@@ -82,18 +80,52 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
             episodeLinks = append(episodeLinks, eLinks...)
     }
 
-    var wg sync.WaitGroup
-    for _, eLink := range episodeLinks {
-        wg.Add(1)
-        split := strings.Split(eLink, "/")
-        cleanId := split[len(split) - 1]
-        go func() {
-            defer wg.Done()
-            e := GetEpisode(cleanId)
-            episodes = append(episodes, e)
-        }()
+    in := gen(episodeLinks)
+    e0 := getEpisodeWorker(in)
+    e1 := getEpisodeWorker(in)
+    e2 := getEpisodeWorker(in)
+    e3 := getEpisodeWorker(in)
+    e4 := getEpisodeWorker(in)
+    e5 := getEpisodeWorker(in)
+    e6 := getEpisodeWorker(in)
+    e7 := getEpisodeWorker(in)
+    e8 := getEpisodeWorker(in)
+    e9 := getEpisodeWorker(in)
+    episodes = mergeEpisodes(e0, e1, e2, e3, e4, e5, e6, e7, e8, e9)
+    return
+}
+
+func gen(episodeLinks []string) <-chan string {
+    out := make(chan string)
+    go func() {
+        for _, link := range episodeLinks {
+            out <- link
+        }
+        close(out)
+    }()
+    return out
+}
+
+func getEpisodeWorker(in <-chan string) <-chan structures.Episode {
+    out := make(chan structures.Episode)
+    go func() {
+        for n := range in {
+            split := strings.Split(n, "/")
+            cleanId := split[len(split) - 1]
+            log.Println(cleanId)
+            out <- GetEpisode(cleanId)
+        }
+        close(out)
+    }()
+    return out
+}
+
+func mergeEpisodes(es ...<-chan structures.Episode) (episodes []structures.Episode) {
+    for _, e := range es {
+        for episode := range e {
+            episodes = append(episodes, episode)
+        }
     }
-    wg.Wait()
     return
 }
 
