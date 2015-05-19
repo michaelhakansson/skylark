@@ -16,13 +16,21 @@ import(
 const freshnessLimit float64 = 0.5
 var services []string = []string{"svtplay", "tv3play", "kanal5play"}
 
-func syncAll() {
+func syncNew() {
+    var showsToUpdate []structures.Show
     for _, service := range services {
         ids := getIdsWithService(service)
         // Add all shows and episodes to the DB
         for _, id := range ids {
-            syncShow(id, service)
+            added, show := db.AddShow(id, service)
+            if added {
+                showsToUpdate = append(showsToUpdate, show)
+            }
         }
+    }
+
+    for _, show := range showsToUpdate {
+        syncShow(show.PlayId, show.PlayService)
     }
     updateChangeFrequencyForAll()
 }
@@ -38,7 +46,7 @@ func updateChangeFrequencyForAll() {
 
 func syncShow(showId string, playservice string) {
     show, episodes := getShowWithService(showId, playservice)
-    _, dbShowObject := db.AddShow(show.Title, show.PlayId, show.PlayService)
+    _, dbShowObject := db.AddShowInfo(show.Title, show.PlayId, show.PlayService)
 
     for _, episode := range episodes {
         db.AddEpisode(dbShowObject.Id, episode)
@@ -98,6 +106,7 @@ func sortEpisodesByDate(episodes []structures.Episode) (structures.Episodes) {
 }
 
 func main() {
+    syncNew()
     go func() {
         timer := time.Tick(10 * time.Minute)
         for now := range timer {

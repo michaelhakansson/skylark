@@ -22,7 +22,7 @@ func Connect() *mgo.Session {
     return session
 }
 
-func AddShow(title string, playid string, playservice string) (result bool, show structures.Show) {
+func AddShow(playid string, playservice string) (result bool, show structures.Show) {
     result = false
     session := Connect()
     defer session.Close()
@@ -30,20 +30,45 @@ func AddShow(title string, playid string, playservice string) (result bool, show
     count, err := c.Find(bson.M{"playid": playid}).Count()
     if err != nil || count > 0 {
         err = c.Find(bson.M{"playid": playid}).One(&show)
-        log.Printf("Show %s (%s) already exists", title, playid)
+        log.Printf("Show %s (%s) already exists", show.Title, show.PlayId)
         return
     }
-    var episodes []structures.Episode
-    show = structures.Show{Id: bson.NewObjectId(), ChangeFrequency: 1, LastUpdated: time.Now(), Title: title, PlayId: playid,
-    PlayService: playservice, Episodes: episodes}
+    show = structures.Show{Id: bson.NewObjectId(), ChangeFrequency: 1, LastUpdated: time.Now(), PlayId: playid, PlayService: playservice}
 
     err = c.Insert(show)
     if err != nil {
         log.Fatal(err)
         return
     }
-    log.Printf("Added %s", title)
+    log.Printf("Added %s", show.PlayId)
     result = true
+    return
+}
+
+func AddShowInfo(title string, playid string, playservice string) (result bool, show structures.Show) {
+    result = false;
+    session := Connect()
+    defer session.Close()
+    c := session.DB(db).C("shows")
+    err := c.Find(bson.M{"playid": playid}).One(&show)
+    if err != nil {
+        log.Fatal(err)
+        return
+    }
+
+    show.Title = title
+    show.PlayId = playid
+    show.PlayService = playservice
+    var episodes []structures.Episode
+    show.Episodes = episodes
+
+    _, err = c.UpsertId(show.Id, show)
+    if err != nil {
+        log.Fatal(err)
+        return
+    }
+    result = true
+    log.Printf("Added show information to %s", show.Title)
     return
 }
 
