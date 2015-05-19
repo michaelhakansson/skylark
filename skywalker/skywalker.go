@@ -93,7 +93,7 @@ func calcChangeFrequency(show structures.Show) float64 {
     if math.IsNaN(cf) {
         cf = 1
     }
-    return cf
+    return math.Min(cf,100)
 }
 
 func sortEpisodesByDate(episodes []structures.Episode) (structures.Episodes) {
@@ -111,7 +111,16 @@ func main() {
         timer := time.Tick(10 * time.Minute)
         for now := range timer {
             log.Println(now)
-            // Sync shows according to lastupdated and change frequence
+            ids := db.GetAllShowIds()
+            for _, id := range ids {
+                show := db.GetShowByPlayId(id)
+                // Max time since update allowed (in seconds)
+                maxTimeSinceUpdate := (24 / show.ChangeFrequency)
+                if time.Now().Sub(show.LastUpdated).Hours() > maxTimeSinceUpdate {
+                    syncShow(show.PlayId, show.PlayService)
+                    db.UpdateShowWithData(show)
+                }
+            }
         }
     }()
 }
