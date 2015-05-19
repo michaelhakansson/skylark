@@ -112,7 +112,6 @@ func getEpisodeWorker(in <-chan string) <-chan structures.Episode {
         for n := range in {
             split := strings.Split(n, "/")
             cleanId := split[len(split) - 1]
-            log.Println(cleanId)
             out <- GetEpisode(cleanId)
         }
         close(out)
