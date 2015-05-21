@@ -5,6 +5,7 @@ import(
     "log"
     "net/http"
     "strconv"
+    "time"
     "github.com/gorilla/mux"
     "github.com/michaelhakansson/skylark/db"
     //"github.com/michaelhakansson/skylark/skywalker"
@@ -58,7 +59,7 @@ func ShowHandler(w http.ResponseWriter, r *http.Request) {
     episodes := structures.SortEpisodesByDate(show.Episodes)
     show.Episodes = episodes
     p := &Page{Title: show.Title, Show: show}
-    t, _ := template.ParseFiles("layouts/show.html")
+    t := template.Must(template.New("show.html").Funcs(funcMap).ParseFiles("layouts/show.html"))
     t.Execute(w, p)
 }
 
@@ -69,6 +70,32 @@ func VideoHandler(w http.ResponseWriter, r *http.Request) {
     show := db.GetShowByPlayId(showid)
     episode := db.GetEpisodeByPlayId(showid, episodeId)
     p := &Page{Title: show.Title + " - " + episode.Title, Show: show, Episode: episode}
-    t, _ := template.ParseFiles("layouts/video.html")
+    t := template.Must(template.New("video.html").Funcs(funcMap).ParseFiles("layouts/video.html"))
     t.Execute(w, p)
+}
+
+var funcMap = template.FuncMap{
+    "timeString": timeString,
+    "zeroPaddingString": zeroPaddingString,
+    "zeroPadding": zeroPadding,
+}
+
+func timeString(t time.Time) string {
+    return t.Format("2006-01-02 15:04")
+}
+
+func zeroPaddingString(i string) string {
+    number, err := strconv.ParseInt(string(i), 0, 64)
+    if err != nil {
+        return i
+    }
+    return zeroPadding(number)
+}
+
+func zeroPadding(i int64) string {
+    if i < 10 {
+        return "0" + strconv.FormatInt(i, 10)
+    } else {
+        return strconv.FormatInt(i, 10)
+    }
 }

@@ -19,6 +19,7 @@
                         <source src={{.Episode.VideoUrl}}>
                     </video>
                     <p>{{.Title}}</p>
+                    <p>S{{zeroPaddingString .Episode.Season}}E{{zeroPaddingString .Episode.EpisodeNumber}}</p>
                     <p>{{.Episode.Description}}</p>
                 </div>
             </div>
