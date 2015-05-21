@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Skylark | {{.Title}}</title>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    </head>
+    <body class="container">
+        <div class="row">
+            <div class="col-md-8 col-lg-offset-2">
+                <div class="page-header">
+                    <h1>{{.Title}}</h1>
+                </div>
+                <div>
+                    {{ $id := .Show.PlayId }}
+                    {{ range $key, $value := .Show.Episodes }}
+                    <div class="media">
+                        <div class="media-left">
+                            <a href="/video/{{$id}}/{{$value.PlayId}}">
+                                <img class="media-object"
+                                     src={{$value.Thumbnail}} style="width:64px;
+                                     height:64px;"/>
+                            </a>
+                        </div>
+                        <div class="media-body">
+                            <h4 class="media-heading">{{$value.Title}}</h4>
+                            <p
+                                class="media-body">S{{$value.Season}}E{{$value.EpisodeNumber}}
+                                {{$value.Description}}</p>
+                        </div>
+                    </div>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+

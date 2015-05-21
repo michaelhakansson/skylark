@@ -1,6 +1,7 @@
 package structures
 
 import(
+    "sort"
     "time"
     "gopkg.in/mgo.v2/bson"
 )
@@ -41,4 +42,13 @@ func (e Episodes) Less(i, j int) bool {
 
 func (e Episodes) Swap(i, j int) {
     e[i], e[j] = e[j], e[i]
+}
+
+func SortEpisodesByDate(episodes []Episode) (Episodes) {
+    episodes_sorted := make(Episodes, 0, len(episodes))
+    for _, episode := range episodes {
+        episodes_sorted = append(episodes_sorted, episode)
+    }
+    sort.Sort(episodes_sorted)
+    return episodes_sorted
 }

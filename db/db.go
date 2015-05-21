@@ -22,6 +22,26 @@ func Connect() *mgo.Session {
     return session
 }
 
+func GetAllServices() (map[string]int) {
+    services := make(map[string]int)
+    session := Connect()
+    defer session.Close()
+    c := session.DB(db).C("shows")
+    var result []string
+    err := c.Find(nil).Distinct("playservice", &result)
+    if err != nil {
+        log.Fatal(err)
+    }
+    for _, service := range result {
+        count, err := c.Find(bson.M{"playservice": service}).Count()
+        if err != nil {
+            log.Fatal(err)
+        }
+        services[service] = count
+    }
+    return services
+}
+
 func AddShow(playid string, playservice string) (result bool, show structures.Show) {
     result = false
     session := Connect()
@@ -125,6 +145,17 @@ func GetShowById(showid bson.ObjectId) structures.Show {
     return s
 }
 
+func GetShowsByPlayService(playservice string) (shows []structures.Show) {
+    session := Connect()
+    defer session.Close()
+    c := session.DB(db).C("shows")
+    err := c.Find(bson.M{"playservice": playservice}).Sort("title").All(&shows)
+    if err != nil {
+        log.Fatal(err)
+    }
+    return
+}
+
 func GetAllShowIds() (showIds []string) {
     session := Connect()
     defer session.Close()
@@ -179,3 +210,15 @@ func UpdateEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     log.Printf("Updated episode %d", episode.PlayId)
     return true
 }
+
+func GetEpisodeByPlayId(showid string, playid int64) structures.Episode {
+    show := GetShowByPlayId(showid)
+    var episode structures.Episode
+    for _, e := range show.Episodes {
+        if e.PlayId == playid {
+            episode = e
+        }
+    }
+    return episode
+}
+

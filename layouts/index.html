@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Skylark | {{.Title}}</title>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    </head>
+    <body class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="page-header">
+                    <h1>{{.Title}}</h1>
+                </div>
+                <div class="list-group">
+                    {{ range $key, $value := .Services }}
+                    <a href="/service/{{$key}}" class="list-group-item">
+                        <span class="badge">{{$value}}</span>
+                        <h4 class="list-group-item-heading">{{$key}}</h4>
+                    </a>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+

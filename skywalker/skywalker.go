@@ -3,7 +3,7 @@ package main
 import(
     "log"
     "math"
-    "sort"
+    //"sort"
     //    "sync"
     "time"
     "github.com/michaelhakansson/skylark/services/svtplay"
@@ -73,7 +73,7 @@ func getShowWithService(showId string, playservice string) (show structures.Show
 
 func calcChangeFrequency(show structures.Show) float64 {
     var tot float64
-    episodes := sortEpisodesByDate(show.Episodes)
+    episodes := structures.SortEpisodesByDate(show.Episodes)
     n := len(episodes)
     for i := 0; i < n - 1; i++ {
         ed1 := episodes[i].Broadcasted
@@ -94,15 +94,6 @@ func calcChangeFrequency(show structures.Show) float64 {
         cf = 1
     }
     return math.Min(cf,100)
-}
-
-func sortEpisodesByDate(episodes []structures.Episode) (structures.Episodes) {
-    episodes_sorted := make(structures.Episodes, 0, len(episodes))
-    for _, episode := range episodes {
-        episodes_sorted = append(episodes_sorted, episode)
-    }
-    sort.Sort(episodes_sorted)
-    return episodes_sorted
 }
 
 func main() {
