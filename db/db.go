@@ -65,7 +65,7 @@ func AddShow(playid string, playservice string) (result bool, show structures.Sh
     return
 }
 
-func AddShowInfo(title string, playid string, playservice string) (result bool, show structures.Show) {
+func AddShowInfo(title string, thumbnail string, playid string, playservice string) (result bool, show structures.Show) {
     result = false;
     session := Connect()
     defer session.Close()
@@ -77,6 +77,7 @@ func AddShowInfo(title string, playid string, playservice string) (result bool, 
     }
 
     show.Title = title
+    show.Thumbnail = thumbnail
     show.PlayId = playid
     show.PlayService = playservice
     show.LastUpdated = time.Now()

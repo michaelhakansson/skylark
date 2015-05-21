@@ -1,11 +1,11 @@
 package skywalker
 
 import(
-//    "log"
+    //"log"
     "math"
     //"sort"
-    //    "sync"
-//    "time"
+    //"sync"
+    //"time"
     "github.com/michaelhakansson/skylark/services/svtplay"
     "github.com/michaelhakansson/skylark/services/tv3play"
     "github.com/michaelhakansson/skylark/services/kanal5play"
@@ -46,7 +46,7 @@ func updateChangeFrequencyForAll() {
 
 func SyncShow(showId string, playservice string) {
     show, episodes := getShowWithService(showId, playservice)
-    _, dbShowObject := db.AddShowInfo(show.Title, show.PlayId, show.PlayService)
+    _, dbShowObject := db.AddShowInfo(show.Title, show.Thumbnail, show.PlayId, show.PlayService)
 
     for _, episode := range episodes {
         db.AddEpisode(dbShowObject.Id, episode)
