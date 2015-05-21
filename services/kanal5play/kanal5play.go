@@ -136,6 +136,7 @@ func parseShowInfo(page []byte, showId string) (show structures.Show, linkToSeas
     show.Title = doc.Find(".content-header h1").Text()
     show.PlayService = playService
     show.PlayId = showId
+    show.Thumbnail, _ = doc.Find(".sbs-program-info-content img").Attr("src")
     linkToSeasonsPage, _ = doc.Find(".season .season-info a").First().Attr("href")
     return
 }

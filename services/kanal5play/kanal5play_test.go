@@ -9,6 +9,7 @@ import(
 type testshow struct {
     testfile string
     title string
+    thumbnail string
     linktoseasonspage string
 }
 
@@ -40,8 +41,8 @@ type testepisode struct {
 }
 
 var shows = []testshow {
-    {"show1.html", "Arga snickaren", "/program/226052/sasong/12"},
-    {"show2.html", "Berg & Meltzer i Europa", "/program/3154653787/sasong/2"},
+    {"show1.html", "Arga snickaren", "http://lh3.googleusercontent.com/t2fcy5tOvKwGu7kTivuqlATojS-cPGQFTKbodpL0gmIaNdchITJ39TRNkaqNafjDGaEorBxMOE77ht3_bk8_=s576", "/program/226052/sasong/12"},
+    {"show2.html", "Berg & Meltzer i Europa", "http://lh3.googleusercontent.com/P2a3Ig5HQARbCKCYVGIzMcn3z5-OGSDJ_iVr4oPcyFsJ8AzrmhKq0lWEX1OXdw3xSZQyEKx4ssXYpo65hroVqg=s576", "/program/3154653787/sasong/2"},
 }
 
 var seasons = []testseason {
@@ -97,6 +98,13 @@ func TestShowParser(t *testing.T) {
                 "For", pair.testfile,
                 "expected", pair.title,
                 "got", show.Title,
+            )
+        }
+        if show.Thumbnail != pair.thumbnail {
+            t.Error(
+                "For", pair.testfile,
+                "expected", pair.thumbnail,
+                "got", show.Thumbnail,
             )
         }
         if linkToSeasonsPage != pair.linktoseasonspage {
