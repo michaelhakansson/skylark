@@ -79,6 +79,7 @@ func AddShowInfo(title string, playid string, playservice string) (result bool, 
     show.Title = title
     show.PlayId = playid
     show.PlayService = playservice
+    show.LastUpdated = time.Now()
     var episodes []structures.Episode
     show.Episodes = episodes
 
@@ -98,7 +99,7 @@ func UpdateShow(showid bson.ObjectId) bool {
     c := session.DB(db).C("shows")
     show := GetShowById(showid)
     show.LastUpdated = time.Now()
-    _, err := c.Upsert(showid, show)
+    _, err := c.UpsertId(showid, show)
     if err != nil {
         log.Fatal(err)
         return false
@@ -107,17 +108,18 @@ func UpdateShow(showid bson.ObjectId) bool {
     return true
 }
 
-func UpdateShowWithData(show structures.Show) bool {
+func UpdateShowChangeFrequency(showid bson.ObjectId, changefrequency float64) bool {
     session := Connect()
     defer session.Close()
     c := session.DB(db).C("shows")
-    show.LastUpdated = time.Now()
-    _, err := c.UpsertId(show.Id, show)
+    show := GetShowById(showid)
+    show.ChangeFrequency = changefrequency
+    _, err := c.UpsertId(showid, show)
     if err != nil {
         log.Fatal(err)
         return false
     }
-    log.Printf("Updated show %s with new data", show.Title)
+    log.Printf("Updated show %s change frequency", show.Title)
     return true
 }
 

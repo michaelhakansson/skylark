@@ -1,11 +1,11 @@
-package main
+package skywalker
 
 import(
-    "log"
+//    "log"
     "math"
     //"sort"
     //    "sync"
-    "time"
+//    "time"
     "github.com/michaelhakansson/skylark/services/svtplay"
     "github.com/michaelhakansson/skylark/services/tv3play"
     "github.com/michaelhakansson/skylark/services/kanal5play"
@@ -16,7 +16,7 @@ import(
 const freshnessLimit float64 = 0.5
 var services []string = []string{"svtplay", "tv3play", "kanal5play"}
 
-func syncNew() {
+func SyncNew() {
     var showsToUpdate []structures.Show
     for _, service := range services {
         ids := getIdsWithService(service)
@@ -30,7 +30,7 @@ func syncNew() {
     }
 
     for _, show := range showsToUpdate {
-        syncShow(show.PlayId, show.PlayService)
+        SyncShow(show.PlayId, show.PlayService)
     }
     updateChangeFrequencyForAll()
 }
@@ -39,12 +39,12 @@ func updateChangeFrequencyForAll() {
     ids := db.GetAllShowIds()
     for _, id := range ids {
         show := db.GetShowByPlayId(id)
-        show.ChangeFrequency = calcChangeFrequency(show)
-        db.UpdateShowWithData(show)
+        changefrequency := calcChangeFrequency(show)
+        db.UpdateShowChangeFrequency(show.Id, changefrequency)
     }
 }
 
-func syncShow(showId string, playservice string) {
+func SyncShow(showId string, playservice string) {
     show, episodes := getShowWithService(showId, playservice)
     _, dbShowObject := db.AddShowInfo(show.Title, show.PlayId, show.PlayService)
 
@@ -96,7 +96,7 @@ func calcChangeFrequency(show structures.Show) float64 {
     return math.Min(cf,100)
 }
 
-func main() {
+/*func main() {
     syncNew()
     go func() {
         timer := time.Tick(10 * time.Minute)
@@ -114,4 +114,4 @@ func main() {
             }
         }
     }()
-}
+}*/

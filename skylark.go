@@ -8,7 +8,7 @@ import(
     "time"
     "github.com/gorilla/mux"
     "github.com/michaelhakansson/skylark/db"
-    //"github.com/michaelhakansson/skylark/skywalker"
+    "github.com/michaelhakansson/skylark/skywalker"
     "github.com/michaelhakansson/skylark/structures"
 )
 
@@ -21,6 +21,32 @@ type Page struct {
 }
 
 func main() {
+    go func() {
+        timer := time.Tick(24 * time.Hour)
+        for _ = range timer {
+            log.Println("Sync new shows")
+            skywalker.SyncNew()
+            log.Println("Syncing of new show completed")
+        }
+    }()
+
+    go func() {
+        timer := time.Tick(10 * time.Minute)
+        for _ = range timer {
+            log.Println("Sync outdated shows")
+            ids := db.GetAllShowIds()
+            for _, id := range ids {
+                show := db.GetShowByPlayId(id)
+                // Max time since update allowed
+                maxTimeSinceUpdate := (24 / show.ChangeFrequency)
+                if time.Now().Sub(show.LastUpdated).Hours() > maxTimeSinceUpdate {
+                    skywalker.SyncShow(show.PlayId, show.PlayService)
+                }
+            }
+            log.Println("Syncing of outdated shows completed")
+        }
+    }()
+
     r := mux.NewRouter()
     r.HandleFunc("/", HomeHandler)
     r.HandleFunc("/service/{id}", ServiceHandler)
@@ -76,12 +102,26 @@ func VideoHandler(w http.ResponseWriter, r *http.Request) {
 
 var funcMap = template.FuncMap{
     "timeString": timeString,
+    "trimText": trimText,
     "zeroPaddingString": zeroPaddingString,
     "zeroPadding": zeroPadding,
 }
 
 func timeString(t time.Time) string {
     return t.Format("2006-01-02 15:04")
+}
+
+func trimText(s string) string {
+    var result string
+    for i, c := range s {
+        if i >= 78 {
+            break
+        } else {
+            result += string(c)
+        }
+    }
+    result += "..."
+    return result
 }
 
 func zeroPaddingString(i string) string {
