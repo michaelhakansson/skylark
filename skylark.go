@@ -59,7 +59,7 @@ func main() {
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
     services := db.GetAllServices()
     p := &Page{Title: "Home", Services: services}
-    t, _ := template.ParseFiles("layouts/index.html")
+    t := template.Must(template.ParseFiles("layouts/index.tmpl", "layouts/header.tmpl"))
     t.Execute(w, p)
 }
 
@@ -74,7 +74,7 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
         }
     }
     p := &Page{Title: service, Shows: watchableShows}
-    t, _ := template.ParseFiles("layouts/service.html")
+    t := template.Must(template.ParseFiles("layouts/service.tmpl", "layouts/header.tmpl"))
     t.Execute(w, p)
 }
 
@@ -85,7 +85,7 @@ func ShowHandler(w http.ResponseWriter, r *http.Request) {
     episodes := structures.SortEpisodesByDate(show.Episodes)
     show.Episodes = episodes
     p := &Page{Title: show.Title, Show: show}
-    t := template.Must(template.New("show.html").Funcs(funcMap).ParseFiles("layouts/show.html"))
+    t := template.Must(template.New("show.tmpl").Funcs(funcMap).ParseFiles("layouts/show.tmpl", "layouts/header.tmpl"))
     t.Execute(w, p)
 }
 
@@ -96,7 +96,7 @@ func VideoHandler(w http.ResponseWriter, r *http.Request) {
     show := db.GetShowByPlayId(showid)
     episode := db.GetEpisodeByPlayId(showid, episodeId)
     p := &Page{Title: show.Title + " - " + episode.Title, Show: show, Episode: episode}
-    t := template.Must(template.New("video.html").Funcs(funcMap).ParseFiles("layouts/video.html"))
+    t := template.Must(template.New("video.tmpl").Funcs(funcMap).ParseFiles("layouts/video.tmpl"))
     t.Execute(w, p)
 }
 
