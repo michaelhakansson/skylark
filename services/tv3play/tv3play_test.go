@@ -55,6 +55,7 @@ func TestParseDateTime(t *testing.T) {
 type testshow struct {
     id string
     title string
+    thumbnail string
     number int
 }
 
@@ -74,8 +75,8 @@ type testepisode struct {
 }
 
 var testNumberOfEpisodes = []testshow {
-    {"804", "Adaktusson", 88},
-    {"9471", "Mozart in the Jungle", 4},
+    {"804", "Adaktusson", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/sites/viastream.viasat.tv/files/category_pictures/adaktusson_s6.jpg", 88},
+    {"9471", "Mozart in the Jungle", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/seasons/11519/season/mozart_in_the_jungle_sasong1-bCeSdEa.jpg", 4},
 }
 
 var episodes = []testepisode {

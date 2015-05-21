@@ -185,12 +185,16 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
     // 1. Build show info using API call
     url := jsonShowUrl + showId
     b := getPage(url)
-    var sh struct {Title string}
+    var sh struct {
+        Title string
+        Image string
+    }
     err := json.Unmarshal(b, &sh)
     checkerr(err)
     show.Title = sh.Title
     show.PlayId = showId
     show.PlayService = playService
+    show.Thumbnail = sh.Image
 
     // 2. Fetch all seasons and id's via another API call
     var s AllSeasons
