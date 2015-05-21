@@ -12,6 +12,7 @@ type testshow struct {
     testfile string
     id string
     title string
+    thumbnail string
     number int
 }
 
@@ -54,13 +55,13 @@ type testseasonepisode struct {
 }
 
 var showsXML = []testshow{
-    {"show1rss.xml", "vetenskapens-varld", "Vetenskapens värld", 18},
-    {"show2rss.xml", "uppdrag-granskning", "Uppdrag granskning", 16},
+    {"show1rss.xml", "vetenskapens-varld", "Vetenskapens värld", "http://www.svt.se/cachable_image/1402560543000/vetenskapens-varld/article2114658.svt/ALTERNATES/extralarge/vetenskapensvarld-victoria.jpg", 18},
+    {"show2rss.xml", "uppdrag-granskning", "Uppdrag granskning", "http://www.svt.se/cachable_image/1403794482000/ug/article2149590.svt/ALTERNATES/extralarge/uppdraggranskning.jpg", 16},
 }
 
 var showsPage = []testshow{
-    {"show1page.html", "vetenskapens-varld", "Vetenskapens värld", 15},
-    {"show2page.html", "uppdrag-granskning", "Uppdrag granskning", 15},
+    {"show1page.html", "vetenskapens-varld", "Vetenskapens värld", "http://www.svt.se/cachable_image/1402560543000/vetenskapens-varld/article2114658.svt/ALTERNATES/extralarge/vetenskapensvarld-victoria.jpg", 15},
+    {"show2page.html", "uppdrag-granskning", "Uppdrag granskning", "http://www.svt.se/cachable_image/1403794482000/ug/article2149590.svt/ALTERNATES/extralarge/uppdraggranskning.jpg", 15},
 }
 
 var episodes = []testepisode{
@@ -134,6 +135,23 @@ func TestXMLParse(t *testing.T) {
                 "For", pair.id,
                 "expected", pair.number,
                 "got", len(e),
+            )
+        }
+    }
+}
+
+func TestShowThumbnail(t *testing.T) {
+    for _, pair := range showsPage {
+        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        thumbnail := parseShowThumbnail(page)
+        if thumbnail != pair.thumbnail {
+            t.Error(
+                "For", pair.id,
+                "expected", pair.thumbnail,
+                "got", thumbnail,
             )
         }
     }

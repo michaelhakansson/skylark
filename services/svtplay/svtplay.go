@@ -99,15 +99,16 @@ func parseAllProgramsPage(page []byte) (ids []string) {
 
 // GetShow fetches the information and all the episodes for a show
 func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
+    pageUrl := playUrlBase + showId
     xmlUrl :=  playUrlBase + showId + rssUrl
     b := getPage(xmlUrl)
     var episodeIds []string
     if len(b) > 0 {
         show, episodeIds = parseShowXML(b, showId)
-    } else {
-        pageUrl := playUrlBase + showId
+    } else {    
         show, episodeIds = parseShowPage(getPage(pageUrl), showId)
     }
+    show.Thumbnail = parseShowThumbnail(getPage(pageUrl))
     var wg sync.WaitGroup
     for _, id := range episodeIds {
         wg.Add(1)
@@ -158,6 +159,15 @@ func parseShowPage(page []byte, showId string) (show structures.Show, episodeIds
             episodeIds = append(episodeIds, digi)
         }
     })
+    return
+}
+
+func parseShowThumbnail(page []byte) (thumbnail string) {
+    reader := bytes.NewReader(page)
+    doc, err := goquery.NewDocumentFromReader(reader)
+    checkerr(err)
+    thumbnail, _ = doc.Find(".play_title-page-trailer__image").Attr("data-imagename")
+    thumbnail = "http:" + thumbnail
     return
 }
 
