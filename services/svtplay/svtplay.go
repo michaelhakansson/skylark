@@ -248,31 +248,31 @@ func parseDateTime(d string, t string) (datetime time.Time){
 // it was broadcast and the episode number is set to the time it was broadcasted
 // Returns the numbers as strings
 func parseSeasonEpisodeNumbers(seasonepisode string) (season string, episode string) {
-    numbers, _ := regexp.Compile(`([0-9])`)
+    season = "0"
+    episode = "0"
+    numbers, _ := regexp.Compile(`([0-9]+)`)
     foundnumbers := numbers.MatchString(seasonepisode)
     if !foundnumbers {
-        season = "0"
-        episode = seasonepisode
         return
     }
     letters, _ := regexp.Compile(`^([a-z])`)
     foundLetters := letters.MatchString(seasonepisode)
-    s := strings.Split(seasonepisode, "-")
+    allNumbers := numbers.FindAllString(seasonepisode, -1)
     if foundLetters {
-        if len(s) >= 4 {
-            season = s[1]
-            episode = s[3]
-        } else {
+        if len(allNumbers) >= 2 {
+            season = allNumbers[0]
+            episode = allNumbers[1]
+        } else if len(allNumbers) > 0 {
             season = "0"
-            episode = s[1]
+            episode = allNumbers[0]
         }
     } else {
-        if len(s) >= 4 {
-            season = s[0] + "/" + s[1]
-            episode = s[2] + ":" + s[3]
-        } else {
+        if len(allNumbers) >= 4 {
+            season = allNumbers[0] + "/" + allNumbers[1]
+            episode = allNumbers[2] + ":" + allNumbers[3]
+        } else if len(allNumbers) >= 2 {
             season = "0"
-            episode = s[0] + "/" + s[1]
+            episode = allNumbers[0] + "/" + allNumbers[1]
         }
     }
     return
