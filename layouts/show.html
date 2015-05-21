@@ -2,6 +2,7 @@
 <html>
     <head>
         <title>Skylark | {{.Title}}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet"
               href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
@@ -24,10 +25,13 @@
                             </a>
                         </div>
                         <div class="media-body">
-                            <h4 class="media-heading">{{$value.Title}}</h4>
-                            <p
-                                class="media-body">S{{$value.Season}}E{{$value.EpisodeNumber}}
-                                {{$value.Description}}</p>
+                            <a href="/video/{{$id}}/{{$value.PlayId}}">
+                                <h4 class="media-heading">{{$value.Title}}</h4>
+                                <p
+                                    class="media-body">Broadcasted:
+                                    {{$value.Broadcasted}}
+                                    {{$value.Description}}</p>
+                            </a>
                         </div>
                     </div>
                     {{ end }}
