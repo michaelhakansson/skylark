@@ -13,6 +13,7 @@ type Show struct {
     Title string `bson:"title"`
     PlayId string `bson:"playid"`
     PlayService string `bson:"playservice"`
+    Thumbnail string `bson:"thumbnail"`
     Episodes []Episode `bson:"episodes"`
 }
 
