@@ -10,7 +10,8 @@
                         {{ range $key, $value := .Services }}
                         <a href="/service/{{$key}}" class="list-group-item">
                             <span class="badge">{{$value}}</span>
-                            <h4 class="list-group-item-heading">{{$key}}</h4>
+                            <h4
+                            class="list-group-item-heading">{{prettifyServiceText $key}}</h4>
                         </a>
                         {{ end }}
                     </div>

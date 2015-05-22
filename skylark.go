@@ -59,7 +59,7 @@ func main() {
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
     services := db.GetAllServices()
     p := &Page{Title: "Home", Services: services}
-    t := template.Must(template.ParseFiles("layouts/index.tmpl", "layouts/header.tmpl"))
+    t := template.Must(template.New("index.tmpl").Funcs(funcMap).ParseFiles("layouts/index.tmpl", "layouts/header.tmpl"))
     t.Execute(w, p)
 }
 
@@ -74,7 +74,7 @@ func ServiceHandler(w http.ResponseWriter, r *http.Request) {
         }
     }
     p := &Page{Title: service, Shows: watchableShows}
-    t := template.Must(template.ParseFiles("layouts/service.tmpl", "layouts/header.tmpl"))
+    t := template.Must(template.New("service.tmpl").Funcs(funcMap).ParseFiles("layouts/service.tmpl", "layouts/header.tmpl"))
     t.Execute(w, p)
 }
 
@@ -102,7 +102,7 @@ func VideoHandler(w http.ResponseWriter, r *http.Request) {
 
 var funcMap = template.FuncMap{
     "timeString": timeString,
-    "trimText": trimText,
+    "prettifyServiceText": prettifyServiceText,
     "zeroPaddingString": zeroPaddingString,
     "zeroPadding": zeroPadding,
 }
@@ -111,17 +111,14 @@ func timeString(t time.Time) string {
     return t.Format("2006-01-02 15:04")
 }
 
-func trimText(s string) string {
-    var result string
-    for i, c := range s {
-        if i >= 78 {
-            break
-        } else {
-            result += string(c)
-        }
+func prettifyServiceText(service string) (prettyText string) {
+    prettyText = service
+    switch service {
+        case "svtplay": prettyText = "SVT Play"
+        case "tv3play": prettyText = "TV3 Play"
+        case "kanal5play": prettyText = "Kanal 5 Play"
     }
-    result += "..."
-    return result
+    return
 }
 
 func zeroPaddingString(i string) string {
