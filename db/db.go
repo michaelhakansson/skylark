@@ -90,7 +90,7 @@ func AddShowInfo(title string, thumbnail string, playid string, playservice stri
         return
     }
     result = true
-    log.Printf("Added show information to %s", show.Title)
+    log.Printf("Added/updated show information to %s", show.Title)
     return
 }
 
@@ -180,7 +180,7 @@ func AddEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     c := session.DB(db).C("shows")
     show := GetShowById(showid)
     for _, e := range show.Episodes {
-        if e.PlayId == episode.PlayId {
+        if string(e.PlayId) == string(episode.PlayId) {
             UpdateEpisode(showid, episode)
             return true
         }
@@ -201,7 +201,7 @@ func UpdateEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     c := session.DB(db).C("shows")
     show := GetShowById(showid)
     for i, e := range show.Episodes {
-        if e.PlayId == episode.PlayId {
+        if string(e.PlayId) == string(episode.PlayId) {
             show.Episodes[i] = episode
         }
     }
