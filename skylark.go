@@ -2,8 +2,10 @@ package main
 
 import(
     "html/template"
+    "io"
     "log"
     "net/http"
+    "os"
     "strconv"
     "time"
     "github.com/gorilla/mux"
@@ -52,6 +54,7 @@ func main() {
     r.HandleFunc("/service/{id}", ServiceHandler)
     r.HandleFunc("/show/{id}", ShowHandler)
     r.HandleFunc("/video/{showid}/{playid}", VideoHandler)
+    r.HandleFunc("/img/{image}", ImageHandler)
     log.Println("Port: 4321")
     panic(http.ListenAndServe(":4321", r))
 }
@@ -95,9 +98,17 @@ func VideoHandler(w http.ResponseWriter, r *http.Request) {
     episodeId, _ := strconv.ParseInt(vars["playid"], 10, 64)
     show := db.GetShowByPlayId(showid)
     episode := db.GetEpisodeByPlayId(showid, episodeId)
-    p := &Page{Title: show.Title + " - " + episode.Title, Show: show, Episode: episode}
-    t := template.Must(template.New("video.tmpl").Funcs(funcMap).ParseFiles("layouts/video.tmpl"))
+    p := &Page{Title: "Now playing: " + show.Title + " - " + episode.Title, Show: show, Episode: episode}
+    t := template.Must(template.New("video.tmpl").Funcs(funcMap).ParseFiles("layouts/video.tmpl", "layouts/header.tmpl"))
     t.Execute(w, p)
+}
+
+func ImageHandler(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    image := vars["image"]
+    file, _ := os.Open("./img/"+ image)
+    defer file.Close()
+    io.Copy(w, file)
 }
 
 var funcMap = template.FuncMap{

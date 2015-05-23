@@ -1,7 +1,7 @@
 {{template "header" .}}
     <body class="container">
         <div class="row">
-            <div class="col-md-8 col-lg-offset-2">
+            <div class="col-md-8 col-md-offset-2">
                 <div class="page-header">
                     <h1>{{.Title}}</h1>
                 </div>
@@ -12,7 +12,7 @@
                         <li>
                             <a href="/video/{{$id}}/{{$value.PlayId}}">
                                 <div class="item item-thumbnail">
-                                    <img src={{$value.Thumbnail}} />
+                                    <img src="/img/{{$value.PlayId}}-96.png" />
                                     <h4 class="media-heading">{{$value.Title}}</h4>
                                     <p>S{{zeroPaddingString $value.Season}}E{{zeroPaddingString $value.EpisodeNumber}},
                                 Broadcasted: {{timeString $value.Broadcasted}}</br>

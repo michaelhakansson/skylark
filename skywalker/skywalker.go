@@ -1,8 +1,13 @@
 package skywalker
 
 import(
-    //"log"
+    "io"
+    "log"
     "math"
+    "net/http"
+    "os"
+    "os/exec"
+    "strconv"
     //"sort"
     //"sync"
     //"time"
@@ -13,7 +18,11 @@ import(
     "github.com/michaelhakansson/skylark/structures"
 )
 
-const freshnessLimit float64 = 0.5
+const(
+    freshnessLimit float64 = 0.5
+    imgLocation string = "./img/"
+    useragent string = "mozilla/5.0 (iphone; cpu iphone os 7_0_2 like mac os x) applewebkit/537.51.1 (khtml, like gecko) version/7.0 mobile/11a501 safari/9537.53"
+)
 var services []string = []string{"svtplay", "tv3play", "kanal5play"}
 
 func SyncNew() {
@@ -50,6 +59,77 @@ func SyncShow(showId string, playservice string) {
 
     for _, episode := range episodes {
         db.AddEpisode(dbShowObject.Id, episode)
+    }
+    SyncThumbnail(show)
+}
+
+func SyncThumbnails() {
+    ids := db.GetAllShowIds()
+    for _, id := range ids {
+        show := db.GetShowByPlayId(id)
+        SyncThumbnail(show)
+    }
+}
+
+func SyncThumbnail(show structures.Show) {
+    log.Printf("Started sync of thumbnails for %s", show.Title)
+    sizes := []string{"96", "256"} // Small and large thumbnails
+    prepareThumbnails(show.PlayId, show.Thumbnail, sizes)
+    for _, episode := range show.Episodes {
+        eid := strconv.FormatInt(episode.PlayId, 10)
+        prepareThumbnails(eid, episode.Thumbnail, sizes)
+    }
+    log.Printf("Sync of thumbnails for %s is completed", show.Title)
+}
+
+func prepareThumbnails(id string, url string, sizes []string) {
+    if len(url) == 0 {
+        return
+    }
+    for _, size := range sizes {
+        f1, err := os.Open(imgLocation + id + "-" + size + ".png")
+        f1.Close()
+        if err != nil {
+            f2, err := os.Open(imgLocation + id + "-org.jpg")
+            f2.Close()
+            if err != nil {
+                downloadThumbnail(id, url)
+            }
+            resizeThumbnail(id, size)
+        }
+    }
+    os.Remove("./img/" + id + "-org.jpg")
+    return
+}
+
+func resizeThumbnail(id string, size string) {
+    filename := id + "-" + size + ".png"
+    args := []string{"-s", size, "-o", "./" + filename, imgLocation + id + "-org.jpg"}
+    cmd := exec.Command("vipsthumbnail", args...)
+    cmd.Start()
+    cmd.Wait()
+}
+
+func downloadThumbnail(id string, url string) {
+    out, err := os.Create(imgLocation + id + "-org.jpg")
+    defer out.Close()
+    if err != nil {
+        log.Fatal(err)
+    }
+    client := &http.Client{}
+    req, err := http.NewRequest("GET", url, nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+    req.Header.Set("User-Agent", useragent)
+    resp, err := client.Do(req)
+    defer resp.Body.Close()
+    if err != nil {
+        log.Fatal(err)
+    }
+    _, err = io.Copy(out, resp.Body)
+    if err != nil {
+        log.Fatal(err)
     }
 }
 

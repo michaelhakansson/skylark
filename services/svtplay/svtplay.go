@@ -105,7 +105,7 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
     var episodeIds []string
     if len(b) > 0 {
         show, episodeIds = parseShowXML(b, showId)
-    } else {    
+    } else {
         show, episodeIds = parseShowPage(getPage(pageUrl), showId)
     }
     show.Thumbnail = parseShowThumbnail(getPage(pageUrl))
@@ -207,6 +207,9 @@ func parseBasicEpisodeInformation(program Program, episodeId string) (episode st
     episode.PlayId = program.VideoId
     episode.Title = program.Context.Title
     episode.Thumbnail = program.Context.ThumbnailImage
+    if strings.Contains(episode.Thumbnail, "/public/images/default/play_default_998x561.jpg") {
+        episode.Thumbnail = "http://www.svtplay.se" + episode.Thumbnail
+    }
     return
 }
 
