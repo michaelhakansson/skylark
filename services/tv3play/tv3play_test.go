@@ -75,7 +75,7 @@ type testepisode struct {
 }
 
 var testNumberOfEpisodes = []testshow {
-    {"804", "Adaktusson", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/sites/viastream.viasat.tv/files/category_pictures/adaktusson_s6.jpg", 88},
+    {"804", "Adaktusson", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/sites/viastream.viasat.tv/files/category_pictures/adaktusson_s6.jpg", 84},
     {"9471", "Mozart in the Jungle", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/seasons/11519/season/mozart_in_the_jungle_sasong1-bCeSdEa.jpg", 4},
 }
 

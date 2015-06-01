@@ -50,7 +50,7 @@ func AddShow(playid string, playservice string) (result bool, show structures.Sh
     count, err := c.Find(bson.M{"playid": playid}).Count()
     if err != nil || count > 0 {
         err = c.Find(bson.M{"playid": playid}).One(&show)
-        log.Printf("Show %s (%s) already exists", show.Title, show.PlayId)
+        //log.Printf("Show %s (%s) already exists", show.Title, show.PlayId)
         return
     }
     show = structures.Show{Id: bson.NewObjectId(), ChangeFrequency: 1, LastUpdated: time.Now(), PlayId: playid, PlayService: playservice}
@@ -60,7 +60,7 @@ func AddShow(playid string, playservice string) (result bool, show structures.Sh
         log.Fatal(err)
         return
     }
-    log.Printf("Added %s", show.PlayId)
+    //log.Printf("Added %s", show.PlayId)
     result = true
     return
 }
@@ -90,7 +90,7 @@ func AddShowInfo(title string, thumbnail string, playid string, playservice stri
         return
     }
     result = true
-    log.Printf("Added/updated show information to %s", show.Title)
+    //log.Printf("Added/updated show information to %s", show.Title)
     return
 }
 
@@ -105,7 +105,7 @@ func UpdateShow(showid bson.ObjectId) bool {
         log.Fatal(err)
         return false
     }
-    log.Printf("Updated show %s", show.Title)
+    //log.Printf("Updated show %s", show.Title)
     return true
 }
 
@@ -120,7 +120,7 @@ func UpdateShowChangeFrequency(showid bson.ObjectId, changefrequency float64) bo
         log.Fatal(err)
         return false
     }
-    log.Printf("Updated show %s change frequency", show.Title)
+    //log.Printf("Updated show %s change frequency", show.Title)
     return true
 }
 
@@ -179,19 +179,13 @@ func AddEpisode(showid bson.ObjectId, episode structures.Episode) bool {
     defer session.Close()
     c := session.DB(db).C("shows")
     show := GetShowById(showid)
-    for _, e := range show.Episodes {
-        if string(e.PlayId) == string(episode.PlayId) {
-            UpdateEpisode(showid, episode)
-            return true
-        }
-    }
     show.Episodes = append(show.Episodes, episode)
     _, err := c.UpsertId(showid, show)
     if err != nil {
         log.Fatal(err)
         return false
     }
-    log.Printf("Added episode %d to show %s", episode.PlayId, show.Title)
+    //log.Printf("Added episode %d to show %s", episode.PlayId, show.Title)
     return true
 }
 
@@ -210,7 +204,7 @@ func UpdateEpisode(showid bson.ObjectId, episode structures.Episode) bool {
         log.Fatal(err)
         return false
     }
-    log.Printf("Updated episode %d", episode.PlayId)
+    //log.Printf("Updated episode %d", episode.PlayId)
     return true
 }
 
@@ -218,10 +212,19 @@ func GetEpisodeByPlayId(showid string, playid int64) structures.Episode {
     show := GetShowByPlayId(showid)
     var episode structures.Episode
     for _, e := range show.Episodes {
-        if e.PlayId == playid {
+        if string(e.PlayId) == string(playid) {
             episode = e
         }
     }
     return episode
 }
 
+func ContainsEpisodeWithPlayId(showid string, playid int64) bool {
+    show := GetShowByPlayId(showid)
+    for _, e := range show.Episodes {
+        if string(e.PlayId) == string(playid) {
+            return true
+        }
+    }
+    return false
+}

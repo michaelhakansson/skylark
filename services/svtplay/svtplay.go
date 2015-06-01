@@ -9,7 +9,6 @@ import(
     "net/http"
     "regexp"
     "strings"
-    "sync"
     "time"
     "github.com/michaelhakansson/skylark/structures"
     "github.com/PuerkitoBio/goquery"
@@ -97,8 +96,8 @@ func parseAllProgramsPage(page []byte) (ids []string) {
     return
 }
 
-// GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
+// GetShow fetches the information and all the episode ids for a show
+func GetShow(showId string) (show structures.Show, episodes []string) {
     pageUrl := playUrlBase + showId
     xmlUrl :=  playUrlBase + showId + rssUrl
     b := getPage(xmlUrl)
@@ -109,17 +108,11 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
         show, episodeIds = parseShowPage(getPage(pageUrl), showId)
     }
     show.Thumbnail = parseShowThumbnail(getPage(pageUrl))
-    var wg sync.WaitGroup
+
     for _, id := range episodeIds {
-        wg.Add(1)
         cleanId := strings.Replace(string(id), "/", "", 2)
-        go func() {
-            defer wg.Done()
-            e := GetEpisode(cleanId)
-            episodes = append(episodes, e)
-        }()
+        episodes = append(episodes, cleanId)
     }
-    wg.Wait()
     return
 }
 

@@ -65,8 +65,8 @@ func parseAllProgramsPage(page []byte) (ids []string) {
     return
 }
 
-// GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
+// GetShow fetches the information and all the episode ids for a show
+func GetShow(showId string) (show structures.Show, episodes []string) {
     page := getPage(allProgramsPage + "/" + showId)
 
     show, linkToSeasonsPage := parseShowInfo(page, showId)
@@ -75,56 +75,17 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
     seasonLinks := parseSeasonLinks(page)
     var episodeLinks []string
     for _, sLink := range seasonLinks {
-            page = getPage(playUrlBase + sLink)
-            eLinks := parseEpisodeLinksOnSeasonPage(page)
-            episodeLinks = append(episodeLinks, eLinks...)
+        page = getPage(playUrlBase + sLink)
+        eLinks := parseEpisodeLinksOnSeasonPage(page)
+        episodeLinks = append(episodeLinks, eLinks...)
     }
 
-    in := gen(episodeLinks)
-    e0 := getEpisodeWorker(in)
-    e1 := getEpisodeWorker(in)
-    e2 := getEpisodeWorker(in)
-    e3 := getEpisodeWorker(in)
-    e4 := getEpisodeWorker(in)
-    e5 := getEpisodeWorker(in)
-    e6 := getEpisodeWorker(in)
-    e7 := getEpisodeWorker(in)
-    e8 := getEpisodeWorker(in)
-    e9 := getEpisodeWorker(in)
-    episodes = mergeEpisodes(e0, e1, e2, e3, e4, e5, e6, e7, e8, e9)
-    return
-}
-
-func gen(episodeLinks []string) <-chan string {
-    out := make(chan string)
-    go func() {
-        for _, link := range episodeLinks {
-            out <- link
-        }
-        close(out)
-    }()
-    return out
-}
-
-func getEpisodeWorker(in <-chan string) <-chan structures.Episode {
-    out := make(chan structures.Episode)
-    go func() {
-        for n := range in {
-            split := strings.Split(n, "/")
-            cleanId := split[len(split) - 1]
-            out <- GetEpisode(cleanId)
-        }
-        close(out)
-    }()
-    return out
-}
-
-func mergeEpisodes(es ...<-chan structures.Episode) (episodes []structures.Episode) {
-    for _, e := range es {
-        for episode := range e {
-            episodes = append(episodes, episode)
-        }
+    for _, link := range episodeLinks {
+        split := strings.Split(link, "/")
+        cleanId := split[len(split) - 1]
+        episodes = append(episodes, cleanId)
     }
+
     return
 }
 

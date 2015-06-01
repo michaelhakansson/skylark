@@ -8,7 +8,6 @@ import(
     "net/http"
     "strconv"
     "strings"
-    "sync"
     "time"
     "github.com/michaelhakansson/skylark/structures"
     //    "github.com/PuerkitoBio/goquery"
@@ -180,8 +179,8 @@ func GetAllProgramIds() (programs []string) {
     return
 }
 
-// GetShow fetches the information and all the episodes for a show
-func GetShow(showId string) (show structures.Show, episodes []structures.Episode) {
+// GetShow fetches the information and all the episode ids for a show
+func GetShow(showId string) (show structures.Show, episodes []string) {
     // 1. Build show info using API call
     url := jsonShowUrl + showId
     b := getPage(url)
@@ -216,20 +215,13 @@ func GetShow(showId string) (show structures.Show, episodes []structures.Episode
         err = json.Unmarshal(b, &allEpisodes)
         checkerr(err)
 
-        var wg sync.WaitGroup
-        // Populate episodes array via GetEpisode call for each episode
+        // Get all the episode ids
         for _, episode := range allEpisodes.EmbeddedEpisodes.Videos {
-            wg.Add(1)
             cleanId := strconv.FormatInt(episode.Id, 10)
-            go func() {
-                defer wg.Done()
-                if episode.Type != "clip" {
-                e := GetEpisode(cleanId)
-                episodes = append(episodes, e)
+            if episode.Type != "clip" {
+                episodes = append(episodes, cleanId)
             }
-            }()
         }
-        wg.Wait()
     }
     return
 }

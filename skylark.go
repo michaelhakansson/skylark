@@ -28,7 +28,7 @@ func main() {
         for _ = range timer {
             log.Println("Sync new shows")
             skywalker.SyncNew()
-            log.Println("Syncing of new show completed")
+            log.Println("Syncing of new shows was completed")
         }
     }()
 
@@ -36,16 +36,8 @@ func main() {
         timer := time.Tick(10 * time.Minute)
         for _ = range timer {
             log.Println("Sync outdated shows")
-            ids := db.GetAllShowIds()
-            for _, id := range ids {
-                show := db.GetShowByPlayId(id)
-                // Max time since update allowed
-                maxTimeSinceUpdate := (24 / show.ChangeFrequency)
-                if time.Now().Sub(show.LastUpdated).Hours() > maxTimeSinceUpdate {
-                    skywalker.SyncShow(show.PlayId, show.PlayService)
-                }
-            }
-            log.Println("Syncing of outdated shows completed")
+            skywalker.SyncOutdated()
+            log.Println("Syncing of outdated shows was completed")
         }
     }()
 
