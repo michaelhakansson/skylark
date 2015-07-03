@@ -1,52 +1,60 @@
 package kanal5play
 
-import(
+import (
     "bytes"
     "encoding/json"
-    "log"
+    "github.com/PuerkitoBio/goquery"
+    "github.com/michaelhakansson/skylark/structures"
     "io/ioutil"
+    "log"
     "net/http"
     "strconv"
     "strings"
     "time"
-    "github.com/michaelhakansson/skylark/structures"
-    "github.com/PuerkitoBio/goquery"
 )
 
-const(
-    useragent string = "mozilla/5.0 (iphone; cpu iphone os 7_0_2 like mac os x) applewebkit/537.51.1 (khtml, like gecko) version/7.0 mobile/11a501 safari/9537.53"
-    playService string = "kanal5play"
-    playUrlBase string = "http://www.kanal5play.se/"
-    videoUrlBase string = playUrlBase + "video/"
-    jsonVideoOutputString string = playUrlBase + "api/getVideo?format=IPAD&videoId="
-    allProgramsPage string = playUrlBase + "program"
-    rssUrl string = "/rss.xml"
-)
-
-// struct for json api
-type Api struct {
-    Description string
-    EpisodeNumber int64
-    Id int64
-    IsLive bool
-    Length int64
-    PosterUrl string
-    Premium bool
-    SeasonNumber int64
-    ShownOnTvDateTimestamp int64
-    Streams []Streams
-    Title string
+// Kanal5Play service struct
+type Kanal5Play struct {
 }
 
+const (
+    useragent             string = "mozilla/5.0 (iphone; cpu iphone os 7_0_2 like mac os x) applewebkit/537.51.1 (khtml, like gecko) version/7.0 mobile/11a501 safari/9537.53"
+    playService           string = "kanal5play"
+    playURLBase           string = "http://www.kanal5play.se/"
+    jsonVideoOutputString string = playURLBase + "api/getVideo?format=IPAD&videoId="
+    allProgramsPage       string = playURLBase + "program"
+)
+
+// API describes the structure of the response from the json api call
+type API struct {
+    Description            string
+    EpisodeNumber          int64
+    ID                     int64
+    IsLive                 bool
+    Length                 int64
+    PosterURL              string
+    Premium                bool
+    SeasonNumber           int64
+    ShownOnTvDateTimestamp int64
+    Streams                []Streams
+    Title                  string
+}
+
+// Streams describes the structure for streams
 type Streams struct {
     Format string
     Source string
 }
 
-// GetAllProgramIds fetches from the provider all of the programs id's
+// GetName returns the name of the playservice
+func (k Kanal5Play) GetName() string {
+    return playService
+}
+
+// GetAllProgramIDs fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (ids []string) {
+func (k Kanal5Play) GetAllProgramIDs() (ids []string) {
     page := getPage(allProgramsPage)
     ids = parseAllProgramsPage(page)
     return
@@ -66,37 +74,37 @@ func parseAllProgramsPage(page []byte) (ids []string) {
 }
 
 // GetShow fetches the information and all the episode ids for a show
-func GetShow(showId string) (show structures.Show, episodes []string) {
-    page := getPage(allProgramsPage + "/" + showId)
+func (k Kanal5Play) GetShow(showid string) (show structures.Show, episodes []string) {
+    page := getPage(allProgramsPage + "/" + showid)
 
-    show, linkToSeasonsPage := parseShowInfo(page, showId)
+    show, linkToSeasonsPage := parseShowInfo(page, showid)
 
-    page = getPage(playUrlBase + linkToSeasonsPage)
+    page = getPage(playURLBase + linkToSeasonsPage)
     seasonLinks := parseSeasonLinks(page)
     var episodeLinks []string
     for _, sLink := range seasonLinks {
-        page = getPage(playUrlBase + sLink)
+        page = getPage(playURLBase + sLink)
         eLinks := parseEpisodeLinksOnSeasonPage(page)
         episodeLinks = append(episodeLinks, eLinks...)
     }
 
     for _, link := range episodeLinks {
         split := strings.Split(link, "/")
-        cleanId := split[len(split) - 1]
-        episodes = append(episodes, cleanId)
+        cleanid := split[len(split)-1]
+        episodes = append(episodes, cleanid)
     }
 
     return
 }
 
 // parseShowInfo parses the information about a show on the show page
-func parseShowInfo(page []byte, showId string) (show structures.Show, linkToSeasonsPage string) {
+func parseShowInfo(page []byte, showid string) (show structures.Show, linkToSeasonsPage string) {
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
     show.Title = doc.Find(".content-header h1").Text()
     show.PlayService = playService
-    show.PlayId = showId
+    show.PlayID = showid
     show.Thumbnail, _ = doc.Find(".sbs-program-info-content img").Attr("src")
     linkToSeasonsPage, _ = doc.Find(".season .season-info a").First().Attr("href")
     return
@@ -108,7 +116,7 @@ func parseSeasonLinks(page []byte) (linksToSeasons []string) {
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
     doc.Find(".season-intro a").Each(func(i int, s *goquery.Selection) {
-        if (s.HasClass("paging-button")) {
+        if s.HasClass("paging-button") {
             season, _ := s.Attr("href")
             linksToSeasons = append(linksToSeasons, season)
         }
@@ -130,8 +138,8 @@ func parseEpisodeLinksOnSeasonPage(page []byte) (episodeLinks []string) {
 
 // GetEpisode fetches the information for an episode of a show
 // Returns the episode information
-func GetEpisode(episodeId string) (episode structures.Episode) {
-    url := jsonVideoOutputString + episodeId
+func (k Kanal5Play) GetEpisode(episodeid string) (episode structures.Episode) {
+    url := jsonVideoOutputString + episodeid
     page := getPage(url)
     episode = parseEpisode(page)
     return
@@ -139,7 +147,7 @@ func GetEpisode(episodeId string) (episode structures.Episode) {
 
 // parseEpisode parses the episode information provided by the api
 func parseEpisode(page []byte) (episode structures.Episode) {
-    var a Api
+    var a API
     err := json.Unmarshal(page, &a)
     checkerr(err)
     episode.Broadcasted = time.Unix(a.ShownOnTvDateTimestamp/1000, 0)
@@ -148,13 +156,13 @@ func parseEpisode(page []byte) (episode structures.Episode) {
     episode.EpisodeNumber = strconv.FormatInt(a.EpisodeNumber, 10)
     episode.Length = (time.Duration(a.Length/1000) * time.Second).String()
     episode.Live = a.IsLive
-    episode.PlayId = a.Id
+    episode.PlayID = a.ID
     episode.Season = strconv.FormatInt(a.SeasonNumber, 10)
     episode.Title = a.Title
-    episode.Thumbnail = a.PosterUrl
+    episode.Thumbnail = a.PosterURL
     for _, vStream := range a.Streams {
         if vStream.Format == "IPAD" {
-            episode.VideoUrl = vStream.Source
+            episode.VideoURL = vStream.Source
         }
     }
     return

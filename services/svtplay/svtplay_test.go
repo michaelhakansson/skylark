@@ -1,76 +1,69 @@
 package svtplay
 
-import(
-    "io/ioutil"
-    "log"
+import (
     "testing"
     "time"
 )
 
-
 type testshow struct {
-    testfile string
-    id string
-    title string
+    testurl   string
+    id        string
+    title     string
     thumbnail string
-    number int
+    number    int
 }
 
 type testepisode struct {
-    testfile string
-    id string
+    testurl         string
+    id              string
     broadcastedtime string
-    category string
-    description string
-    episodenumber string
-    length string
-    live bool
-    playid int64
-    season string
-    thumbnail string
-    title string
-    videourl string
+    category        string
+    description     string
+    episodenumber   string
+    length          string
+    live            bool
+    playid          int64
+    season          string
+    thumbnail       string
+    title           string
+    videourl        string
 }
 
 type testlength struct {
     length int64
-    text string
+    text   string
 }
 
 type testdescription struct {
-    testfile string
+    testurl     string
     description string
 }
 
 type testdatetime struct {
-    date string
-    time string
+    date     string
+    time     string
     datetime time.Time
 }
 
 type testseasonepisode struct {
     seasonepisode string
-    season string
-    episode string
+    season        string
+    episode       string
 }
 
 var showsXML = []testshow{
-    {"show1rss.xml", "vetenskapens-varld", "Vetenskapens värld", "http://www.svt.se/cachable_image/1402560543000/vetenskapens-varld/article2114658.svt/ALTERNATES/extralarge/vetenskapensvarld-victoria.jpg", 18},
-    {"show2rss.xml", "uppdrag-granskning", "Uppdrag granskning", "http://www.svt.se/cachable_image/1403794482000/ug/article2149590.svt/ALTERNATES/extralarge/uppdraggranskning.jpg", 16},
+    {"http://www.svtplay.se/vetenskapens-varld/rss.xml", "vetenskapens-varld", "Vetenskapens värld", "http://www.svt.se/cachable_image/1402560543000/vetenskapens-varld/article2114658.svt/ALTERNATES/extralarge/vetenskapensvarld-victoria.jpg", 6},
+    {"http://www.svtplay.se/uppdrag-granskning/rss.xml", "uppdrag-granskning", "Uppdrag granskning", "http://www.svt.se/cachable_image/1403794482000/ug/article2149590.svt/ALTERNATES/extralarge/uppdraggranskning.jpg", 23},
 }
 
 var showsPage = []testshow{
-    {"show1page.html", "vetenskapens-varld", "Vetenskapens värld", "http://www.svt.se/cachable_image/1402560543000/vetenskapens-varld/article2114658.svt/ALTERNATES/extralarge/vetenskapensvarld-victoria.jpg", 15},
-    {"show2page.html", "uppdrag-granskning", "Uppdrag granskning", "http://www.svt.se/cachable_image/1403794482000/ug/article2149590.svt/ALTERNATES/extralarge/uppdraggranskning.jpg", 15},
+    {"http://www.svtplay.se/vetenskapens-varld", "vetenskapens-varld", "Vetenskapens värld", "http://www.svt.se/cachable_image/1402560543000/vetenskapens-varld/article2114658.svt/ALTERNATES/extralarge/vetenskapensvarld-victoria.jpg", 6},
+    {"http://www.svtplay.se/uppdrag-granskning", "uppdrag-granskning", "Uppdrag granskning", "http://www.svt.se/cachable_image/1403794482000/ug/article2149590.svt/ALTERNATES/extralarge/uppdraggranskning.jpg", 15},
 }
 
 var episodes = []testepisode{
-    {"episode1.json", "2843612", "", "kultur-och-nöje", "Del 4 av 10. Gruppfinal, med bland annat Sisyfos-tävlingen - vätskefyllda pilatesbollar som ska rullas uppför en backe. Några av Sveriges främsta idrottsmän och idrottskvinnor möts i fysiska och psykiska utmaningar för att kora Mästarnas mästare 2015. I Grupp 1 ingår Anette Norberg, Anna Olsson, Magnus Muhrén, Danijela Rundqvist, Glenn Hysén och Björn Lind. Programledare: Micke Leijnegard.",
-    "4", "58m37s", false, 2843612, "7",
-    "http://www.svt.se/cachable_image/1429226401000/svts/article2849370.svt/ALTERNATES/extralarge/default_title",
-    "Avsnitt 4", "http://svtplay18p-f.akamaihd.net/i/se/open/20150417/1360782-004A/EPISOD-1360782-004A-2ae7758f8108a631_,892,144,252,360,540,1584,2700,.mp4.csmil/master.m3u8?cc1=name=Svenska~default=yes~forced=no~uri=http://media.svt.se/download/mcc/wp3/undertexter-wsrt/1360782/1360782-004A/C(sv)/index.m3u8~lang=sv"},
-    {"episode2.json", "2867878", "", "nyheter", "Kan ses till imorgon 23.59 (1 dag kvar)", "11:00", "1m30s", false, 2867878, "23/4", "http://www.svt.se/cachable_image/1429781701000/svts/article2867877.svt/ALTERNATES/extralarge/default_title",
-    "23/4 11.00", "http://svtplay19i-f.akamaihd.net/i/world/open/20150423/1368669-074A/EPISOD-1368669-074A-208212fd95c96099_,892,144,252,360,540,1584,2700,.mp4.csmil/master.m3u8"},
+    {"http://www.svtplay.se/video/3056634?output=json", "3056634", "20150702", "kultur-och-nöje", "Del 16 av 20. Komikerna Kodjo Akolor, David Druid, Victor Linnèr, Sara Kinberg och Camilla Fågelborg snackar om aktuella och knasiga nyheter de hittar på nätet. Det är udda, konstigt och mycket mycket roligt! Kan ses till tis 29 dec (180 dagar kvar)", "16", "8m2s", false, 3056634, "0", "http://www.svt.se/cachable_image/1435307101000/svts/article3056633.svt/ALTERNATES/extralarge/default_title", "Avsnitt 16", "http://svtplay15m-f.akamaihd.net/i/world/open/20150626/1369824-016A/EPISOD-1369824-016A-3d784c0d4aacadbf_,892,144,252,360,540,1584,2700,.mp4.csmil/master.m3u8"},
+    {"http://www.svtplay.se/video/3050595?output=json", "3050595", "20150702", "nyheter", "Kan ses till tor 9 jul (7 dagar kvar)", "0", "10m1s", false, 3050595, "0", "http://www.svt.se/cachable_image/1435854360000/svts/article3076351.svt/ALTERNATES/extralarge/default_title", "2/7 18.00", "http://svtplay2k-f.akamaihd.net/i/world/open/20150702/1368588-157A/EPISOD-1368588-157A-b45a0af0f4d3ae62_,892,144,252,360,540,1584,2700,.mp4.csmil/master.m3u8"},
 }
 
 var lengths = []testlength{
@@ -86,31 +79,28 @@ var datetimes = []testdatetime{
 
 var seasonepisodes = []testseasonepisode{
     {"sasong-2-avsnitt-3-1", "2", "3"},
-    {"3-5-12-00", "3/5", "12:00"},
+    {"3-5-12-00", "0", "0"},
 }
 
 var descriptions = []testdescription{
-    {"episode1description.html", "Del 4 av 10. Gruppfinal, med bland annat Sisyfos-tävlingen - vätskefyllda pilatesbollar som ska rullas uppför en backe. Några av Sveriges främsta idrottsmän och idrottskvinnor möts i fysiska och psykiska utmaningar för att kora Mästarnas mästare 2015. I Grupp 1 ingår Anette Norberg, Anna Olsson, Magnus Muhrén, Danijela Rundqvist, Glenn Hysén och Björn Lind. Programledare: Micke Leijnegard."},
-    {"episode2description.html", "Kan ses till ikväll 23.59 (12 timmar kvar)"},
+    {"http://www.svtplay.se/video/3013183", "Del 19 av 19. För ett år sedan lade TV4 ned sina lokala nyhetssändningar. Samtidigt lovar de att sända regionala program. Lever de upp till sitt löfte? Dessutom: Kommungranskarna återvänder till Örnsköldsvik. Programledare: Karin Mattisson. "},
+    {"http://www.svtplay.se/video/55372", "När det är sovdags för Ernie och Bert tar deras sängar dem ut i världen på spännande äventyr. Ibland får Berts duva eller Ernies gummianka följa  med. Svenska röster: Magnus Ehrner och Steve Kratz."},
 }
 
 func TestProgramIds(t *testing.T) {
-    page, err := ioutil.ReadFile("testFiles/allprograms.html")
-    if err != nil {
-        log.Fatal(err)
-    }
+    page, _ := getPage("http://www.svtplay.se/program")
     ids := parseAllProgramsPage(page)
-    if len(ids) != 556 {
+    if len(ids) != 532 {
         t.Error(
             "For", "parseAllProgramPage, length",
-            "expected", 556,
+            "expected", 532,
             "got", len(ids),
         )
     }
-    if ids[5] != "alla-ar-fotografer" {
+    if ids[5] != "allsang-pa-skansen" {
         t.Error(
             "For", "parseAllProgramsPage, id",
-            "expected", "alla-ar-fotografer",
+            "expected", "allsang-pa-skansen",
             "got", ids[5],
         )
     }
@@ -118,10 +108,7 @@ func TestProgramIds(t *testing.T) {
 
 func TestXMLParse(t *testing.T) {
     for _, pair := range showsXML {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         s, e := parseShowXML(page, pair.id)
         if s.Title != pair.title {
             t.Error(
@@ -142,10 +129,7 @@ func TestXMLParse(t *testing.T) {
 
 func TestShowThumbnail(t *testing.T) {
     for _, pair := range showsPage {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         thumbnail := parseShowThumbnail(page)
         if thumbnail != pair.thumbnail {
             t.Error(
@@ -159,10 +143,7 @@ func TestShowThumbnail(t *testing.T) {
 
 func TestShowPageParse(t *testing.T) {
     for _, pair := range showsPage {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         s, e := parseShowPage(page, pair.id)
         if s.Title != pair.title {
             t.Error(
@@ -183,16 +164,13 @@ func TestShowPageParse(t *testing.T) {
 
 func TestParseJSON(t *testing.T) {
     for _, pair := range episodes {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         program := parseJSON(page)
-        if program.VideoId != pair.playid {
+        if program.VideoID != pair.playid {
             t.Error(
                 "For", pair.id,
                 "expected", pair.playid,
-                "got", program.VideoId,
+                "got", program.VideoID,
             )
         }
         if program.Video.Live != pair.live {
@@ -207,12 +185,9 @@ func TestParseJSON(t *testing.T) {
 
 func TestParseBasicEpisode(t *testing.T) {
     for _, pair := range episodes {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         program := parseJSON(page)
-        e := parseBasicEpisodeInformation(program, pair.id)
+        e := parseBasicEpisodeInformation(program)
         if e.Live != pair.live {
             t.Error(
                 "For", pair.id,
@@ -220,11 +195,11 @@ func TestParseBasicEpisode(t *testing.T) {
                 "got", e.Live,
             )
         }
-        if e.PlayId != pair.playid {
+        if e.PlayID != pair.playid {
             t.Error(
                 "For", pair.id,
                 "expected", pair.playid,
-                "got", e.PlayId,
+                "got", e.PlayID,
             )
         }
         if e.Thumbnail != pair.thumbnail {
@@ -244,14 +219,11 @@ func TestParseBasicEpisode(t *testing.T) {
     }
 }
 
-func TestGetVideoUrl(t *testing.T) {
+func TestGetVideoURL(t *testing.T) {
     for _, pair := range episodes {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         program := parseJSON(page)
-        s := getVideoUrl(program.Video.VideoReferences)
+        s := getVideoURL(program.Video.VideoReferences)
         if s != pair.videourl {
             t.Error(
                 "For", pair.id,
@@ -277,14 +249,11 @@ func TestConvertLengthToString(t *testing.T) {
 
 func TestParseDescription(t *testing.T) {
     for _, pair := range descriptions {
-        page, err := ioutil.ReadFile("testFiles/" + pair.testfile)
-        if err != nil {
-            log.Fatal(err)
-        }
+        page, _ := getPage(pair.testurl)
         desc := parseDescription(page)
         if desc != pair.description {
             t.Error(
-                "For", pair.testfile,
+                "For", pair.testurl,
                 "expected", pair.description,
                 "got", desc,
             )

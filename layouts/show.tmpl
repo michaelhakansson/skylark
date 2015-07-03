@@ -7,12 +7,12 @@
                 </div>
                 <div>
                     <ul class="list">
-                        {{ $id := .Show.PlayId }}
+                        {{ $id := .Show.PlayID }}
                         {{ range $key, $value := .Show.Episodes }}
                         <li>
-                            <a href="/video/{{$id}}/{{$value.PlayId}}">
+                            <a href="/video/{{$id}}/{{$value.PlayID}}">
                                 <div class="item item-thumbnail">
-                                    <img src="/img/{{$value.PlayId}}-96.png" />
+                                    <img src="/img/{{$value.PlayID}}-96.png" />
                                     <h4 class="media-heading">{{$value.Title}}</h4>
                                     <p>S{{zeroPaddingString $value.Season}}E{{zeroPaddingString $value.EpisodeNumber}},
                                 Broadcasted: {{timeString $value.Broadcasted}}</br>

@@ -1,35 +1,37 @@
 package tv3play
 
-import(
+import (
+    "log"
     "testing"
     "time"
-    "log"
 )
 
-func TestFixHlsUrl(t *testing.T) {
+var tv3 = TV3Play{}
+
+func TestFixHlsURL(t *testing.T) {
     log.Print("TestFixHlsUrl")
-    originalUrl := "http://mtgxpitcher01-vh.akamaihd.net/i/open/201502/04/V55886_mtgx_f906f926_,48,260,460,900,1800,.mp4.csmil/master.m3u8?__b__=300&cc1=name=Svenska~default=yes~forced=no~lang=sv~uri=http://cdn.subtitles.mtgx.tv/pitcher/V5xxxx/V558xx/V55886/0000003529/V55886_sub_sv.m3u8"
-    expectedUrl := "http://mtgxpitcher01-vh.akamaihd.net/i/open/201502/04/V55886_mtgx_f906f926_,1800,.mp4.csmil/master.m3u8?__b__=300&cc1=name=Svenska~default=yes~forced=no~lang=sv~uri=http://cdn.subtitles.mtgx.tv/pitcher/V5xxxx/V558xx/V55886/0000003529/V55886_sub_sv.m3u8"
-    actualUrl := fixHlsUrl(originalUrl)
-    if actualUrl != expectedUrl {
+    originalURL := "http://mtgxpitcher01-vh.akamaihd.net/i/open/201502/04/V55886_mtgx_f906f926_,48,260,460,900,1800,.mp4.csmil/master.m3u8?__b__=300&cc1=name=Svenska~default=yes~forced=no~lang=sv~uri=http://cdn.subtitles.mtgx.tv/pitcher/V5xxxx/V558xx/V55886/0000003529/V55886_sub_sv.m3u8"
+    expectedURL := "http://mtgxpitcher01-vh.akamaihd.net/i/open/201502/04/V55886_mtgx_f906f926_,1800,.mp4.csmil/master.m3u8?__b__=300&cc1=name=Svenska~default=yes~forced=no~lang=sv~uri=http://cdn.subtitles.mtgx.tv/pitcher/V5xxxx/V558xx/V55886/0000003529/V55886_sub_sv.m3u8"
+    actualURL := fixHlsURL(originalURL)
+    if actualURL != expectedURL {
         t.Error(
             "For", "fixHlsUrl",
-            "expected", expectedUrl,
-            "got", actualUrl,
+            "expected", expectedURL,
+            "got", actualURL,
         )
     }
 }
 
-func TestFixThumbnailUrl(t *testing.T) {
+func TestFixThumbnailURL(t *testing.T) {
     log.Print("TestFixThumbnailUrl")
-    originalUrl := "http://test.com/{size}/foo"
-    expectedUrl := "http://test.com/" + thumbnailSize + "/foo"
-    actualUrl := fixThumbnailUrl(originalUrl)
-    if actualUrl != expectedUrl {
+    originalURL := "http://test.com/{size}/foo"
+    expectedURL := "http://test.com/" + thumbnailSize + "/foo"
+    actualURL := fixThumbnailURL(originalURL)
+    if actualURL != expectedURL {
         t.Error(
             "For", "fixThumbnailUrl",
-            "expected", expectedUrl,
-            "got", actualUrl,
+            "expected", expectedURL,
+            "got", actualURL,
         )
     }
 
@@ -50,36 +52,35 @@ func TestParseDateTime(t *testing.T) {
     }
 }
 
-
 // TESTS DEPENDENT ON LIVE DATA
 type testshow struct {
-    id string
-    title string
+    id        string
+    title     string
     thumbnail string
-    number int
+    number    int
 }
 
 type testepisode struct {
-    id string
+    id              string
     broadcastedtime string
-    category string
-    description string
-    episodenumber string
-    length string
-    live bool
-    playid int64
-    season string
-    thumbnail string
-    title string
-    videourl string
+    category        string
+    description     string
+    episodenumber   string
+    length          string
+    live            bool
+    playid          int64
+    season          string
+    thumbnail       string
+    title           string
+    videourl        string
 }
 
-var testNumberOfEpisodes = []testshow {
+var testNumberOfEpisodes = []testshow{
     {"804", "Adaktusson", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/sites/viastream.viasat.tv/files/category_pictures/adaktusson_s6.jpg", 84},
-    {"9471", "Mozart in the Jungle", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/seasons/11519/season/mozart_in_the_jungle_sasong1-bCeSdEa.jpg", 4},
+    {"9471", "Mozart in the Jungle", "http://cdn.playapi.mtgx.tv/imagecache/1000x675/cloud/content-images/seasons/11519/season/mozart_in_the_jungle_sasong1-bCeSdEa.jpg", 3},
 }
 
-var episodes = []testepisode {
+var episodes = []testepisode{
     {"469483", "2015 04 01 20:30:00 +0000 UTC", "Humor",
     "I första avsnittet handlar det om kroppen och hur vi använder den. Svenska folket har i en enkät fått svara på vad de tycker om naken överkropp på stan, om hur vi är nakna tillsammans, om kroppsljud och kroppslukter och hur det egentligen funkar med den berömda svenska kompiskramen.",
     "1", "22m51s", false, 469483, "1",
@@ -97,7 +98,7 @@ var episodes = []testepisode {
 func TestGetShow(t *testing.T) {
     log.Print("TestGetShow")
     for _, pair := range testNumberOfEpisodes {
-        s, e := GetShow(pair.id)
+        s, e := tv3.GetShow(pair.id)
         if s.Title != pair.title {
             t.Error(
                 "For", pair.id,
@@ -118,7 +119,7 @@ func TestGetShow(t *testing.T) {
 func TestGetEpisode(t *testing.T) {
     log.Print("TestGetEpisode")
     for _, pair := range episodes {
-        e := GetEpisode(pair.id)
+        e := tv3.GetEpisode(pair.id)
         if e.Description != pair.description {
             t.Error(
                 "For", pair.id,
@@ -147,11 +148,11 @@ func TestGetEpisode(t *testing.T) {
                 "got", e.Live,
             )
         }
-        if e.PlayId != pair.playid {
+        if e.PlayID != pair.playid {
             t.Error(
                 "For", pair.id,
                 "expected", pair.playid,
-                "got", e.PlayId,
+                "got", e.PlayID,
             )
         }
         if e.Season != pair.season {
@@ -175,25 +176,26 @@ func TestGetEpisode(t *testing.T) {
                 "got", e.Title,
             )
         }
-        if e.VideoUrl != pair.videourl {
+        if e.VideoURL != pair.videourl {
             t.Error(
                 "For", pair.id,
                 "expected", pair.videourl,
-                "got", e.VideoUrl,
+                "got", e.VideoURL,
             )
         }
     }
 }
 
-func TestProgramIds(t *testing.T) {
-    log.Print("TestProgramIds")
-    programs := GetAllProgramIds()
-    if len(programs) != 127 {
+func TestProgramIDs(t *testing.T) {
+    log.Print("TestProgramIDs")
+    ids := tv3.GetAllProgramIDs()
+    if len(ids) != 129 {
         t.Error(
-            "For", "GetAllProgramsIds",
-            "expected", 127,
-            "got", len(programs),
+            "For", "GetAllProgramsIDs",
+            "expected", 129,
+            "got", len(ids),
         )
     }
 }
+
 // END TESTS DEPENDENT ON LIVE DATA

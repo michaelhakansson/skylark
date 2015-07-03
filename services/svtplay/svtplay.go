@@ -1,84 +1,101 @@
 package svtplay
 
-import(
+import (
     "bytes"
     "encoding/json"
     "encoding/xml"
-    "log"
+    "github.com/PuerkitoBio/goquery"
+    "github.com/michaelhakansson/skylark/structures"
     "io/ioutil"
+    "log"
     "net/http"
     "regexp"
     "strings"
     "time"
-    "github.com/michaelhakansson/skylark/structures"
-    "github.com/PuerkitoBio/goquery"
 )
 
-const(
-    useragent string = "mozilla/5.0 (iphone; cpu iphone os 7_0_2 like mac os x) applewebkit/537.51.1 (khtml, like gecko) version/7.0 mobile/11a501 safari/9537.53"
-    playService string = "svtplay"
-    playUrlBase string = "http://www.svtplay.se/"
-    videoUrlBase string = playUrlBase + "video/"
-    jsonVideoOutputString string = "?output=json&format=json"
-    allProgramsPage string = playUrlBase + "program"
-    rssUrl string = "/rss.xml"
-)
-
-// structs for an episode's json output
-type Program struct {
-    Context Context
-    Statistics Statistics
-    VideoId int64
-    Video Video
+// SVTPlay service struct
+type SVTPlay struct {
 }
 
+const (
+    useragent             string = "mozilla/5.0 (iphone; cpu iphone os 7_0_2 like mac os x) applewebkit/537.51.1 (khtml, like gecko) version/7.0 mobile/11a501 safari/9537.53"
+    playService           string = "svtplay"
+    playURLBase           string = "http://www.svtplay.se/"
+    videoURLBase          string = playURLBase + "video/"
+    jsonVideoOutputString string = "?output=json"
+    allProgramsPage       string = playURLBase + "program"
+    rssURL                string = "/rss.xml"
+)
+
+// Program and other structs below is for an episode's json output
+type Program struct {
+    Context    Context
+    Statistics Statistics
+    VideoID    int64
+    Video      Video
+}
+
+// Context see above for explanation
 type Context struct {
-    Title string
-    ProgramTitle string
+    Title          string
+    ProgramTitle   string
     ThumbnailImage string
 }
 
+// Statistics see above for explanation
 type Statistics struct {
     BroadcastDate string
     BroadcastTime string
-    Category string
-    Title string
+    Category      string
+    Title         string
 }
 
+// Video see above for explanation
 type Video struct {
     AvailableOnMobile bool
-    Live bool
-    MaterialLength int64
-    Position int64
-    VideoReferences []VideoReferences
+    Live              bool
+    MaterialLength    int64
+    Position          int64
+    VideoReferences   []VideoReferences
 }
 
+// VideoReferences see above for explanation
 type VideoReferences struct {
-    Bitrate int64
+    Bitrate    int64
     PlayerType string
-    Url string
+    URL        string
 }
 
-// structs for rss feed
+// Channel and item are structs for rss feed
 type Channel struct {
     XMLName xml.Name `xml:"rss"`
-    Title string `xml:"channel>title"`
-    Item []Item `xml:"channel>item"`
+    Title   string   `xml:"channel>title"`
+    Item    []Item   `xml:"channel>item"`
 }
 
+// Item see above for explanation
 type Item struct {
-    Title string `xml:"title"`
-    Link string `xml:"link"`
+    Title       string `xml:"title"`
+    Link        string `xml:"link"`
     Description string `xml:"description"`
-    PubDate string `xml:"pubDate"`
-    Guid int64 `xml:"guid"`
+    PubDate     string `xml:"pubDate"`
+    GUID        int64  `xml:"guid"`
 }
 
-// GetAllProgramIds fetches from the provider all of the programs id's
+// GetName returns the name of the playservice
+func (s SVTPlay) GetName() string {
+    return playService
+}
+
+// GetAllProgramIDs fetches from the provider all of the programs id's
 // By parsing the "all program page" of the provider
 // Returns an array of all the id's in the form of a string array
-func GetAllProgramIds() (ids []string) {
-    page := getPage(allProgramsPage)
+func (s SVTPlay) GetAllProgramIDs() (ids []string) {
+    page, status := getPage(allProgramsPage)
+    if status != 200 {
+        return
+    }
     ids = parseAllProgramsPage(page)
     return
 }
@@ -97,46 +114,52 @@ func parseAllProgramsPage(page []byte) (ids []string) {
 }
 
 // GetShow fetches the information and all the episode ids for a show
-func GetShow(showId string) (show structures.Show, episodes []string) {
-    pageUrl := playUrlBase + showId
-    xmlUrl :=  playUrlBase + showId + rssUrl
-    b := getPage(xmlUrl)
-    var episodeIds []string
-    if len(b) > 0 {
-        show, episodeIds = parseShowXML(b, showId)
+func (s SVTPlay) GetShow(showid string) (show structures.Show, episodes []string) {
+    pageURL := playURLBase + showid
+    xmlURL := playURLBase + showid + rssURL
+    page, status := getPage(xmlURL)
+    var episodeids []string
+    if status == 200 {
+        show, episodeids = parseShowXML(page, showid)
     } else {
-        show, episodeIds = parseShowPage(getPage(pageUrl), showId)
+        page, status = getPage(pageURL)
+        if status == 200 {
+            show, episodeids = parseShowPage(page, showid)
+        }
     }
-    show.Thumbnail = parseShowThumbnail(getPage(pageUrl))
+    page, status = getPage(pageURL)
+    if status == 200 {
+        show.Thumbnail = parseShowThumbnail(page)
+    }
 
-    for _, id := range episodeIds {
-        cleanId := strings.Replace(string(id), "/", "", 2)
-        episodes = append(episodes, cleanId)
+    for _, id := range episodeids {
+        cleanid := strings.Replace(string(id), "/", "", 2)
+        episodes = append(episodes, cleanid)
     }
     return
 }
 
 // parseShowXML parses the rss feed for a show
 // Returns the show information and all the episodes
-func parseShowXML(page []byte, showId string) (show structures.Show, episodeIds []string) {
+func parseShowXML(page []byte, showid string) (show structures.Show, episodeids []string) {
     var c Channel
     err := xml.Unmarshal(page, &c)
     checkerr(err)
     show.Title = strings.Replace(c.Title, " - Senaste program", "", 1)
     show.PlayService = playService
-    show.PlayId = showId
+    show.PlayID = showid
     r, err := regexp.Compile(`\/\d+\/`)
     checkerr(err)
     for _, item := range c.Item {
         shortLink := r.FindString(item.Link)
-        episodeIds = append(episodeIds, shortLink)
+        episodeids = append(episodeids, shortLink)
     }
     return
 }
 
 // parseShowPage parses the website for a show
 // Returns the show information and all the episodes
-func parseShowPage(page []byte, showId string) (show structures.Show, episodeIds []string) {
+func parseShowPage(page []byte, showid string) (show structures.Show, episodeids []string) {
     reader := bytes.NewReader(page)
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
@@ -144,12 +167,12 @@ func parseShowPage(page []byte, showId string) (show structures.Show, episodeIds
     checkerr(err)
     show.Title = doc.Find(".play_title-page-info__header-title").Text()
     show.PlayService = playService
-    show.PlayId = showId
+    show.PlayID = showid
     doc.Find(".play_vertical-list").First().Find("li").Each(func(i int, s *goquery.Selection) {
         link, _ := s.Find(".play_vertical-list__header-link").Attr("href")
         digi := r.FindString(link)
         if len(digi) > 0 {
-            episodeIds = append(episodeIds, digi)
+            episodeids = append(episodeids, digi)
         }
     })
     return
@@ -160,30 +183,40 @@ func parseShowThumbnail(page []byte) (thumbnail string) {
     doc, err := goquery.NewDocumentFromReader(reader)
     checkerr(err)
     thumbnail, _ = doc.Find(".play_title-page-trailer__image").Attr("data-imagename")
-    thumbnail = "http:" + thumbnail
+    if strings.Contains(thumbnail, "public/images/default/play_default_998x561.jpg") {
+        thumbnail = "http://www.svtplay.se" + thumbnail
+    } else {
+        thumbnail = "http:" + thumbnail
+    }
     return
 }
 
 // GetEpisode parses the information for an episode of a show
 // Returns the episode information
-func GetEpisode(episodeId string) (episode structures.Episode) {
-    url := videoUrlBase + episodeId + jsonVideoOutputString
-    page := getPage(url)
-    url = videoUrlBase + episodeId
-    descriptionpage := getPage(url)
-    episode = parseEpisode(page, descriptionpage, episodeId)
+func (s SVTPlay) GetEpisode(episodeid string) (episode structures.Episode) {
+    url := videoURLBase + episodeid + jsonVideoOutputString
+    page, status := getPage(url)
+    if status != 200 {
+        return
+    }
+    url = videoURLBase + episodeid
+    descriptionpage, statusdescription := getPage(url)
+    if statusdescription != 200 {
+        return
+    }
+    episode = parseEpisode(page, descriptionpage)
     return
 }
 
 // Parses the json episode data
-func parseEpisode(page []byte, descriptionpage []byte, episodeId string) (episode structures.Episode) {
+func parseEpisode(page []byte, descriptionpage []byte) (episode structures.Episode) {
     program := parseJSON(page)
-    episode = parseBasicEpisodeInformation(program, episodeId)
+    episode = parseBasicEpisodeInformation(program)
     episode.Broadcasted = parseDateTime(program.Statistics.BroadcastDate, program.Statistics.BroadcastTime)
     episode.Description = parseDescription(descriptionpage)
     episode.Length = convertLengthToString(program.Video.MaterialLength)
     episode.Season, episode.EpisodeNumber = parseSeasonEpisodeNumbers(program.Statistics.Title)
-    episode.VideoUrl = getVideoUrl(program.Video.VideoReferences)
+    episode.VideoURL = getVideoURL(program.Video.VideoReferences)
     return
 }
 
@@ -194,23 +227,23 @@ func parseJSON(page []byte) (program Program) {
 }
 
 // Parses the basic information (no conversions needs) from the Program object to Episode object
-func parseBasicEpisodeInformation(program Program, episodeId string) (episode structures.Episode) {
+func parseBasicEpisodeInformation(program Program) (episode structures.Episode) {
     episode.Category = program.Statistics.Category
     episode.Live = program.Video.Live
-    episode.PlayId = program.VideoId
+    episode.PlayID = program.VideoID
     episode.Title = program.Context.Title
     episode.Thumbnail = program.Context.ThumbnailImage
-    if strings.Contains(episode.Thumbnail, "/public/images/default/play_default_998x561.jpg") {
+    if strings.Contains(episode.Thumbnail, "public/images/default/play_default_998x561.jpg") {
         episode.Thumbnail = "http://www.svtplay.se" + episode.Thumbnail
     }
     return
 }
 
 // Gets the url to "ios-friendly" video
-func getVideoUrl(vrefs []VideoReferences) string {
+func getVideoURL(vrefs []VideoReferences) string {
     for _, vref := range vrefs {
         if vref.PlayerType == "ios" {
-            return vref.Url
+            return vref.URL
         }
     }
     return ""
@@ -233,7 +266,7 @@ func parseDescription(page []byte) (description string) {
 
 // parseDateTime parses the date and time for when an episode was broadcasted
 // Returns the date and time as an time object
-func parseDateTime(d string, t string) (datetime time.Time){
+func parseDateTime(d string, t string) (datetime time.Time) {
     if len(d) == 0 {
         d = "19840124"
     }
@@ -245,7 +278,7 @@ func parseDateTime(d string, t string) (datetime time.Time){
     day := d[6:8]
     hour := t[0:2]
     minute := t[2:4]
-    datetime, _ = time.Parse("2006 01 02 15:04", year + " " + month + " " + day + " " + hour + ":" + minute)
+    datetime, _ = time.Parse("2006 01 02 15:04", year+" "+month+" "+day+" "+hour+":"+minute)
     return
 }
 
@@ -256,36 +289,22 @@ func parseDateTime(d string, t string) (datetime time.Time){
 func parseSeasonEpisodeNumbers(seasonepisode string) (season string, episode string) {
     season = "0"
     episode = "0"
-    numbers, _ := regexp.Compile(`([0-9]+)`)
-    foundnumbers := numbers.MatchString(seasonepisode)
-    if !foundnumbers {
-        return
-    }
-    letters, _ := regexp.Compile(`^([a-z])`)
-    foundLetters := letters.MatchString(seasonepisode)
-    allNumbers := numbers.FindAllString(seasonepisode, -1)
-    if foundLetters {
-        if len(allNumbers) >= 2 {
-            season = allNumbers[0]
-            episode = allNumbers[1]
-        } else if len(allNumbers) > 0 {
-            season = "0"
-            episode = allNumbers[0]
+    seasonepisoderegex, err := regexp.Compile(`(song-([0-9]+)-)*avsnitt-([0-9]+)`)
+    checkerr(err)
+    found := seasonepisoderegex.FindStringSubmatch(seasonepisode)
+    if len(found) > 0 {
+        if found[2] != "" {
+            season = found[2]
         }
-    } else {
-        if len(allNumbers) >= 4 {
-            season = allNumbers[0] + "/" + allNumbers[1]
-            episode = allNumbers[2] + ":" + allNumbers[3]
-        } else if len(allNumbers) >= 2 {
-            season = "0"
-            episode = allNumbers[0] + "/" + allNumbers[1]
+        if found[3] != "" {
+            episode = found[3]
         }
     }
     return
 }
 
 // getPage fetches the content from a specified url
-func getPage(url string) []byte {
+func getPage(url string) ([]byte, int) {
     client := &http.Client{}
     req, err := http.NewRequest("GET", url, nil)
     checkerr(err)
@@ -294,7 +313,7 @@ func getPage(url string) []byte {
     defer resp.Body.Close()
     checkerr(err)
     b, _ := ioutil.ReadAll(resp.Body)
-    return b
+    return b, resp.StatusCode
 }
 
 // checkerr checks if an error has occured and logs it if has.
@@ -303,4 +322,3 @@ func checkerr(err error) {
         log.Println(err)
     }
 }
-

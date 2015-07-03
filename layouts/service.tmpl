@@ -9,9 +9,9 @@
                     <ul class="list">
                         {{ range $key, $value := .Shows }}
                         <li>
-                            <a href="/show/{{$value.PlayId}}">
+                            <a href="/show/{{$value.PlayID}}">
                                 <div class="item item-thumbnail">
-                                    <img src="/img/{{$value.PlayId}}-96.png" />
+                                    <img src="/img/{{$value.PlayID}}-96.png" />
                                     <span class="badge item-badge">{{len $value.Episodes}}</span>
                                     <h4 class="media-heading item-media-heading">{{$value.Title}}</h4>
                                 </div>
